@@ -1,0 +1,10 @@
+# Local working exports and historical backups
+/outputs/
+
+# Operating system and development files
+.DS_Store
+node_modules/
+*.log
+.env
+.env.*
+!.env.example
