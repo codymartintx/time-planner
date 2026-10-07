@@ -18,7 +18,7 @@ assert.equal((get('rows').innerHTML.match(/data-field="sshe"/g)||[]).length,51);
 get('setupBtn').onclick();
 assert.equal(get('setupScoreboard').innerHTML,get('scoreboard').innerHTML);
 assert.equal(get('setupAttainmentSummary').textContent,get('attainmentSummary').textContent);
-assert(get('setupScoreboard').innerHTML.includes('98.52'));
+assert(get('setupScoreboard').innerHTML.includes('84.99'));
 const duration=read('performance(derive().flat()).forecast');
 const id=read('state.phases[0].rows[0].id');
 for(const [field,value]of [['logistics','Confirm delivery\nBefore next phase'],['sshe','Review SSHE & V&V <notes>']]){

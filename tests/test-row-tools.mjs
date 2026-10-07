@@ -18,6 +18,28 @@ const initialEnd=read('derive().flat().at(-1).computedEnd');
 const initialHours=read('performance(derive().flat()).forecast');
 function checkDurations(){const now=JSON.parse(read('JSON.stringify(derive().flat().map(r=>[r.id,r.computedDuration]))'));for(const [id,d] of now){const original=initialDurations.find(r=>r[0]===id);if(original)assert.equal(d,original[1]);}}
 function undo(){get('undoBtn').onclick();assert.deepEqual(JSON.parse(read('JSON.stringify(state.phases)')),baseline.phases);assert.equal(read('derive().flat().at(-1).computedEnd'),initialEnd);}
+// Row insertion is exposed on each row and works above/below a middle row in
+// both input modes without consuming another activity's duration.
+function clickRow(action,phaseIndex,id){
+ const tr={dataset:{phaseIndex:String(phaseIndex),id}};
+ const button={dataset:{action},closest:()=>tr};
+ get('rows').onclick({target:{closest:()=>button}});
+}
+assert.equal((get('rows').innerHTML.match(/class="row-insert"/g)||[]).length,initialDurations.length);
+assert(get('rows').innerHTML.includes('data-action="insert-above"'));
+for(const phaseIndex of [0,3])for(const action of ['insert','insert-above']){
+ const original=baseline.phases[phaseIndex].rows[1];
+ clickRow(action,phaseIndex,original.id);
+ const position=action==='insert'?2:1;
+ assert.equal(read(`state.phases[${phaseIndex}].rows.length`),baseline.phases[phaseIndex].rows.length+1);
+ const added=JSON.parse(read(`JSON.stringify(state.phases[${phaseIndex}].rows[${position}])`));
+ assert(!initialDurations.some(([id])=>id===added.id));
+ assert.equal(added.target,null);assert.equal(added.duration,0);assert.equal(added.com,'');
+ assert.equal(read(`derive()[${phaseIndex}][${position}].computedDuration`),0);
+ assert(read('derive().flat().every(row=>!row.error)'));
+ checkDurations();assert.equal(read('derive().flat().at(-1).computedEnd'),initialEnd);undo();
+}
+const unchangedHistory=read('history.length');read('active=0;insert(-1);insert(999)');assert.equal(read('history.length'),unchangedHistory);
 read("active=0;applyRowTool('down',0)");
 assert.equal(read('state.phases[0].rows[1].id'),baseline.phases[0].rows[0].id);checkDurations();assert.equal(read('derive().flat().at(-1).computedEnd'),initialEnd);undo();
 const count=read('history.length');read("active=0;applyRowTool('up',0);applyRowTool('down',state.phases[0].rows.length-1)");assert.equal(read('history.length'),count);
@@ -36,18 +58,16 @@ read('openWellView()');assert(get('copytext').value.split('\n').every(r=>r.split
 context.FormData=class{constructor(v){this.v=v}get(k){return this.v[k]??null}};
 get('setupForm').onsubmit({preventDefault(){},target:{title:baseline.title,rig:baseline.setup.rig,start:baseline.setup.start,formation:'LSS',lateral:'10161',spacing:'203',plugs:'50',pre:'8',post:'8'}});
 assert(read('state.phases[0].rows[1].target>0'));assert.equal(read('Math.round(state.phases[0].rows.reduce((s,r)=>s+r.target,0)*1e8)/1e8'),8);
-assert.equal(read('Math.round(performance(derive().flat()).target*1e8)/1e8'),98.51753846);
-// Tooltips show on hover/focus, stay inside the viewport, and preserve existing descriptions.
-context.window.innerWidth=360;context.window.innerHeight=180;
-document.body=element();let host='';document.body.appendChild=()=>{host='body'};
-const tip=get('controlTooltip');tip.offsetWidth=260;tip.offsetHeight=70;
-const attrs={'aria-describedby':'existing-help'};
-const owner={dataset:{tooltip:'Insert a row below this row.'},getAttribute:k=>attrs[k]??null,setAttribute:(k,v)=>{attrs[k]=v},removeAttribute:k=>{delete attrs[k]},closest:s=>null,contains:t=>t===owner,getBoundingClientRect:()=>({left:340,top:130,bottom:150})};
-tooltipEvents.pointerover[0]({target:{closest:()=>owner}});
-assert.equal(tip.hidden,false);assert.equal(tip.textContent,owner.dataset.tooltip);assert.equal(tip.style.left,'92px');assert.equal(tip.style.top,'52px');assert.equal(host,'body');assert.equal(attrs['aria-describedby'],'existing-help controlTooltip');
-tooltipEvents.keydown[0]({key:'Escape'});assert.equal(tip.hidden,true);assert.equal(attrs['aria-describedby'],'existing-help');
-const dialog=element();dialog.appendChild=()=>{host='dialog'};owner.closest=()=>dialog;
-tooltipEvents.focusin[0]({target:{closest:()=>owner}});assert.equal(host,'dialog');assert.equal(tip.hidden,false);
-read('render()');assert.equal(tip.hidden,true);assert.equal(attrs['aria-describedby'],'existing-help');
+assert.equal(read('Math.round(performance(derive().flat()).target*1e8)/1e8'),84.98988235);
+// Row buttons keep accessible names and no tooltip UI or hover interception.
+assert(!html.includes('data-tooltip'));
+assert(!html.includes('controlTooltip'));
+assert(!get('rows').innerHTML.includes(' title='));
+assert(html.includes('.row-actions:hover .rowtools,.row-actions:focus-within .rowtools{display:flex}'));
+assert(!html.includes('td:nth-child(1):hover .rowtools'));
+const firstCell=get('rows').innerHTML.match(/<tr data-phase-index="0" data-id="[^"]+">(<td[\s\S]*?<\/td>)/)[1];
+assert(firstCell.includes('<div class="row-actions"><button class="row-insert"'));
+assert.equal((firstCell.match(/data-action="insert"/g)||[]).length,1);
+assert(firstCell.includes('<div class="rowtools"><button data-action="insert-above"'));
 assert(get('rows').innerHTML.includes('data-action="duplicate"'));assert(get('rows').innerHTML.includes('data-action="up"'));assert(get('rows').innerHTML.includes('data-action="down"'));assert(get('rows').innerHTML.includes('aria-label="Delete row'));
-console.log('PASS: moves stay within phases; date/duration duplicates and deletes preserve other activity durations and shift the schedule; Undo restores rows/times; copied reminders, reviewed targets, and WellView export; hover/focus tooltips, viewport bounds, dialog visibility and Escape.');
+console.log('PASS: moves stay within phases; date/duration duplicates and deletes preserve other activity durations and shift the schedule; Undo restores rows/times; copied reminders, reviewed targets, and WellView export; persistent + hover/focus controls without tooltips.');

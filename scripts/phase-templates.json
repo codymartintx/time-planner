@@ -1,0 +1,320 @@
+{
+  "Pre Ops": [
+    {
+      "ingredientRow": 4,
+      "label": "BOP Default",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Pre-task brief for task. ID LAI and consider LSRAs via SWC.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 5,
+      "label": "BOP Default",
+      "code": "NUND_BOP",
+      "category": "SETUP",
+      "desc": "BOP",
+      "weight": 1.5,
+      "com": "NU adaptor flange, single Type-81 BOP loaded w/ 2-7/8\" rams, flow cross w/ hydraulic & manual gate valves, double gate BOP loaded w/ (1 set) blind/shear rams & (1 set) blind rams, single Type-U BOP loaded w/ 2-7/8\" rams, annular and Washington head.  Torque all studs to spec.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 6,
+      "label": "BOP Default",
+      "code": "TEST_BOP",
+      "category": "TEST",
+      "desc": "BOP",
+      "weight": 1,
+      "com": "Function tested all BOP rams.  Performed accumulator draw down test.  Good test.  Filled stack and pressure tested all rams (2-7/8\" test subs) to a max of 4,500 PSI & low of 250 PSI for 5 min each.  Good tests.  Pressure tested annular (2-7/8\" test subs) to a max of 2,500 PSI & low of 250 PSI for 5 min.  Good tests. ",
+      "when": {}
+    },
+    {
+      "ingredientRow": 8,
+      "label": "MIRU Rig Default",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Pre-task brief for task. ID LAI and consider LSRAs via SWC.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 9,
+      "label": "MIRU Rig Default",
+      "code": "RURD",
+      "category": "SETUP",
+      "desc": "RIG UP OR RIG DOWN",
+      "weight": 3,
+      "com": "Begin MIRU rig & equipment.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 10,
+      "label": "MIRU Rig Default",
+      "code": "RURD",
+      "category": "SETUP",
+      "desc": "RIG UP OR RIG DOWN",
+      "weight": 4.25,
+      "com": "Racked, tallied & drifted WS.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 11,
+      "label": "MIRU Rig Default",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Crew conducted PTB over MU/ BHA & RIH w/ WS.  Verified COFO operating properly & correct elevators utilized.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 14,
+      "label": "BHA No Motor",
+      "code": "WOV_BHA",
+      "category": "WORKOVER",
+      "desc": "BHA",
+      "weight": 0.25,
+      "com": "Measured & MU BHA #1, torque all connections to spec.\nBHA:  4-5/8\" Varel SlipXtreme cone bit, bit sub, dual float sub (2 flapper back pressure valves installed, V&V'd float direction)",
+      "when": {
+        "preOps.motorBha": false
+      }
+    },
+    {
+      "ingredientRow": 15,
+      "label": "BHA Yes Motor",
+      "code": "WOV_BHA",
+      "category": "WORKOVER",
+      "desc": "BHA",
+      "weight": 0.25,
+      "com": "Make up and function test BHA #1, torque all connections to spec. XXXX psi @ X bpm & XXXX psi @ X bpm",
+      "when": {
+        "preOps.motorBha": true
+      }
+    }
+  ],
+  "Trip in Hole": [
+    {
+      "ingredientRow": 17,
+      "label": "TIH Default",
+      "code": "WOV_RIH",
+      "category": "WORKOVER",
+      "desc": "RUN IN HOLE",
+      "weight": 4.5,
+      "com": "RIH w/ BHA #1 on  2-7/8\" PH-6 WS; fill tbg every 50 jts",
+      "when": {}
+    },
+    {
+      "ingredientRow": 18,
+      "label": "TIH Default",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Conduct pre-task brief over RU power swivel, testing Washington Head & Float Valves",
+      "when": {}
+    },
+    {
+      "ingredientRow": 19,
+      "label": "TIH Default",
+      "code": "RURD_SWIVEL",
+      "category": "SETUP",
+      "desc": "SWIVEL",
+      "weight": 1.5,
+      "com": "MIRU XK-150 power swivel & equip.",
+      "when": {}
+    },
+    {
+      "ingredientRow": 20,
+      "label": "TIH Default",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Pre-task brief for pressure testing washington rubber and beginning drilling ops",
+      "when": {}
+    },
+    {
+      "ingredientRow": 21,
+      "label": "TIH Default",
+      "code": "TEST_SL/FLT",
+      "category": "TEST",
+      "desc": "SURFACE LINES/FLOATS",
+      "weight": 0.5,
+      "com": "Break circulation. Pressure test Washington rubber to 1,500 psi & negative test Float Valves to 1,500 psi - good test on both",
+      "when": {}
+    },
+    {
+      "ingredientRow": 22,
+      "label": "TIH Yes Aphron",
+      "code": "WOV_CIRC",
+      "category": "WORKOVER",
+      "desc": "CIRCULATE",
+      "weight": 0.5,
+      "com": "Circulate Aphron to surface before cont. TIH to KP.",
+      "when": {
+        "tih.aphron": true
+      }
+    }
+  ],
+  "Drill Out": [
+    {
+      "ingredientRow": 24,
+      "label": "Drill-out Default",
+      "code": "WOV_DOP",
+      "category": "WORKOVER",
+      "desc": "DRILL OUT PLUG",
+      "weight": "target",
+      "com": "**Pulled from loader",
+      "when": {},
+      "planningPlaceholder": "drill-out"
+    },
+    {
+      "ingredientRow": 26,
+      "label": "Drill out Yes Aphron",
+      "code": "WOV_CIRC",
+      "category": "WORKOVER",
+      "desc": "CIRCULATE",
+      "weight": 0.5,
+      "com": "TD well at XX,XXX';  CWC & displaced Aphron.\nMarker on surface; PU w/o rotation: XX k-lb.",
+      "when": {
+        "drillOut.aphron": true
+      },
+      "builderActivity": "drill-out-follow-up"
+    },
+    {
+      "ingredientRow": 27,
+      "label": "Drill out No Aphron",
+      "code": "WOV_CIRC",
+      "category": "WORKOVER",
+      "desc": "CIRCULATE",
+      "weight": 0.5,
+      "com": "TD well at XX,XXX';  CWC\nMarker on surface; PU w/o rotation: XX k-lb.",
+      "when": {
+        "drillOut.aphron": false
+      },
+      "builderActivity": "drill-out-follow-up"
+    },
+    {
+      "ingredientRow": 28,
+      "label": "Drill out Default",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Crew conducted PTB to POOH w/ WS.",
+      "when": {},
+      "builderActivity": "drill-out-follow-up"
+    }
+  ],
+  "Trip Out of Hole": [
+    {
+      "ingredientRow": 30,
+      "label": "TOH 10 KWF",
+      "code": "WOV_POOH",
+      "category": "WORKOVER",
+      "desc": "PULL OUT OF HOLE",
+      "weight": 10.75,
+      "com": "TOH laying down WS (XXX jt 2-7/8\" PH-6).\nNOTE: Set/test COFO before TOH. Killed well on the fly w/ XXX bbl 10ppg NaCl",
+      "when": {
+        "toh.snub": false,
+        "toh.killMethod": "10 KWF"
+      }
+    },
+    {
+      "ingredientRow": 31,
+      "label": "TOH Top Kill",
+      "code": "WOV_POOH",
+      "category": "WORKOVER",
+      "desc": "PULL OUT OF HOLE",
+      "weight": 10.75,
+      "com": "TOH laying down WS (XXX jt 2-7/8\" PH-6).\nNOTE: Set/test COFO before TOH. \nStop at jt XXX; Kill well with: XX bbl 10ppg on tbg & XX bbl 10ppg NaCl on annulus. Top kill with XX bbl 11.6ppg on tbg and XX bbl 11.6ppg CaCl on annulus. Confirm 0psi SICP.\nCont. TOH.",
+      "when": {
+        "toh.snub": false,
+        "toh.killMethod": "Top Kill"
+      }
+    },
+    {
+      "ingredientRow": 32,
+      "label": "TOH Yes Snub",
+      "code": "WOV_POOH",
+      "category": "WORKOVER",
+      "desc": "PULL OUT OF HOLE",
+      "weight": 12,
+      "com": "TOH laying down WS (XXX jt 2-7/8\" PH-6) to jt 80",
+      "when": {
+        "toh.snub": true
+      }
+    },
+    {
+      "ingredientRow": 33,
+      "label": "TOH Yes Snub",
+      "code": "SAFETY",
+      "category": "NONOPS",
+      "desc": "NON ACTIVE DUE TO SAFETY EVENT",
+      "weight": 0.25,
+      "com": "Pre-task brief for task. ID LAI and consider LSRAs via SWC.",
+      "when": {
+        "toh.snub": true
+      }
+    },
+    {
+      "ingredientRow": 34,
+      "label": "TOH Yes Snub",
+      "code": "RURD_SNUB_RA",
+      "category": "SETUP",
+      "desc": "SNUBBING UNIT (RIG ASSISTED)",
+      "weight": 1.25,
+      "com": "Bullhead XX bbl 10ppg NaCl. MIRU Goliath RASU. ",
+      "when": {
+        "toh.snub": true
+      }
+    },
+    {
+      "ingredientRow": 35,
+      "label": "TOH Yes Snub",
+      "code": "SNB_POOH",
+      "category": "SNUBBING",
+      "desc": "PULL OUT OF HOLE",
+      "weight": 3,
+      "com": "Snub remaining jts OH. ",
+      "when": {
+        "toh.snub": true
+      }
+    }
+  ],
+  "Post Ops": [
+    {
+      "code": "SAFETY",
+      "weight": 0.25,
+      "com": "Conduct PTB on rigging down the rig floor and rig."
+    },
+    {
+      "code": "RURD_RUNPROD",
+      "weight": 0.25,
+      "com": "Rig down tubing handling equipment, rig floor and support equipment."
+    },
+    {
+      "code": "NUND_BOP",
+      "weight": 2,
+      "com": "Remove BOP stack and flow cross."
+    },
+    {
+      "code": "NU_PRODTREE",
+      "weight": 0.75,
+      "com": "Install production tree and test hanger seals."
+    },
+    {
+      "code": "TEST_PRODTREE",
+      "weight": 0.5,
+      "com": "Pressure test production tree and casing valves. Verify test results."
+    },
+    {
+      "code": "WOV_FLUSH",
+      "weight": 0.5,
+      "com": "Complete well flush and handover."
+    }
+  ]
+}

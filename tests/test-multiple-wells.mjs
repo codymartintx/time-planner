@@ -20,7 +20,23 @@ assert.equal(read('state.wells.length'),1);
 assert.equal(read('state.phases.length'),6);
 assert.equal(read('new Set(state.phases.map(p=>p.wellId)).size'),1);
 assert.equal(read('performance(derive().flat()).forecast'),102.25);
-assert.equal(read('performance(derive().flat()).target.toFixed(2)'),'98.52');
+assert.equal(read('performance(derive().flat()).target.toFixed(2)'),'84.99');
+
+// The saved standard cadence swaps at Drill Out finish, and follows schedule edits.
+const originalSwap=Date.UTC(2026,8,25,18);
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),originalSwap);
+assert(get('rows').innerHTML.includes('Est Well Swap: 9/25/26 18:00'));
+read("setAllTimeModes('duration');state.phases[0].rows[0].duration+=1;render()");
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),originalSwap+3600000);
+read("setAllTimeModes('date');state.phases[2].rows.at(-1).end=iso(parseTime(state.phases[2].rows.at(-1).end)+3600000);render()");
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),originalSwap+7200000);
+read("state.phases[2].rows.at(-1).end='';render()");
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),null);
+assert(get('rows').innerHTML.includes('Est Well Swap: —'));
+context.swapBaseline=JSON.stringify(baseline);
+read("state=JSON.parse(swapBaseline);state.phases[3].type='Post Ops';render()");
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),null,'A changed cadence cannot imply a well swap');
+read('state=JSON.parse(swapBaseline);render()');
 
 // Setup count adds independent fields and preserves the original example.
 get('setupBtn').onclick();
@@ -36,11 +52,12 @@ assert.equal(read('state.phases.length'),18);
 assert.deepEqual(JSON.parse(read('JSON.stringify(state.phases.slice(0,6).map(p=>p.rows))')),baseline.phases.map(p=>p.rows));
 assert.equal(read('state.wells[1].setup.formation'),'WCC');
 assert.equal(read('targets().values[7]'),3);
-assert.equal(read('targets().values[8]'),21.6);
-assert.equal(read('targets().values[9]'),9);
+assert.equal(read('targets().values[8]'),17.28);
+assert.equal(read('targets().values[9]'),9.3);
 assert.equal(read('targets().values[14]'),61.71428571);
 assert.equal((get('rows').innerHTML.match(/class="well-section-head"/g)||[]).length,3);
 assert.equal((get('rows').innerHTML.match(/class="column-headings phase-column-headings"/g)||[]).length,18);
+assert.equal((get('rows').innerHTML.match(/Est Well Swap: —/g)||[]).length,2,'Empty new Drill Out phases have no finish');
 
 // Two more well timelines follow the first with no automatic resets or gaps.
 const op=baseline.ops.find(o=>o.code==='NUND_BOP');
@@ -49,11 +66,16 @@ read("state.phases.slice(6).forEach((p,i)=>p.rows=[{...newRow(),...op,duration:i
 assert.equal(read('derive()[6][0].start'),read('derive()[5].at(-1).computedEnd'));
 assert.equal(read('derive()[12][0].start'),read('derive()[11].at(-1).computedEnd'));
 assert.equal(read('performance(derive().flat()).forecast'),120.25);
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),originalSwap);
+assert.equal(read('wellSwapTime(state.wells[1],derive())'),Date.UTC(2026,8,27,15,15));
+assert.equal(read('wellSwapTime(state.wells[2],derive())'),Date.UTC(2026,8,28,0,15));
+assert(get('rows').innerHTML.includes('Est Well Swap: 9/28/26 00:15'));
 const schedule=read('JSON.stringify(derive())');
 read('toggleWell(state.wells[1].id)');
 assert.equal(read('state.wells[1].collapsed'),true);
 assert(!get('rows').innerHTML.includes('data-id="'+read('state.phases[6].rows[0].id')+'"'));
 assert.equal(read('JSON.stringify(derive())'),schedule);
+assert(get('rows').innerHTML.includes('Est Well Swap: 9/27/26 15:15'),'Collapsed wells keep their swap estimate');
 read('toggleWell(state.wells[1].id);togglePhase(6)');
 assert(!get('rows').innerHTML.includes('data-id="'+read('state.phases[6].rows[0].id')+'"'));
 assert.equal(read('JSON.stringify(derive())'),schedule);
@@ -84,8 +106,9 @@ read("addPhase(state.wells[1].id,'Drill Out')");
 assert.equal(read('state.phases[12].type'),'Drill Out');
 assert.equal(read('state.phases[12].wellId'),read('state.wells[1].id'));
 assert.equal(read('state.phases[13].wellId'),read('state.wells[2].id'));
-assert.equal(read('phaseTarget(state.phases[12])'),21.6);
+assert.equal(read('phaseTarget(state.phases[12])'),17.28);
 assert.equal(read('state.phases[12].rows.length'),0);
+assert.equal(read('wellSwapTime(state.wells[1],derive())'),Date.UTC(2026,8,27,15,15),'An appended manual phase cannot replace the standard Drill Out finish');
 get('undoBtn').onclick();assert.equal(read('state.phases.length'),18);
 
 // Reducing the count requires confirmation, supports cancellation, and can be undone.
@@ -117,10 +140,18 @@ get('setupForm').onsubmit({preventDefault(){},target:{title:'New job',rig:'Range
 read("addPhase(state.wells[0].id,'Trip in Hole');active=0;insert(0)");
 assert.equal(read('state.phases[0].type'),'Trip in Hole');assert.equal(read('state.phases[0].rows.length'),1);
 assert.equal(read('state.phases[0].rows[0].com'),'');assert.equal(read('derive()[0][0].start'),read("parseTime('2026-10-01T06:00')"));
-assert.equal(read('phaseTarget(state.phases[0])'),9);
-assert.equal(read('phasePerformance(state.phases[0],derive()[0]).target'),9);
+assert.equal(read('phaseTarget(state.phases[0])'),7);
+assert.equal(read('phasePerformance(state.phases[0],derive()[0]).target'),7);
 const saved=read('JSON.stringify(state)');context.saved=saved;
 read('state=JSON.parse(saved);render()');
 assert.equal(read('state.wells.length'),1);assert.equal(read('state.phases[0].rows.length'),1);
 assert.equal(read('applyPreOpsRecovery()'),0);
+
+// Even an identical manually rebuilt cadence after clearing cannot infer a swap.
+read("state.phases=[];phaseOptions.forEach(type=>addPhase(state.wells[0].id,type));state.phases.forEach(p=>{p.mode='duration';p.rows=[{...newRow(),duration:1}]});render()");
+assert.equal(read('derive()[2].at(-1).computedEnd'),Date.UTC(2026,9,1,9));
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),null);
+assert(get('rows').innerHTML.includes('Est Well Swap: —'));
+read('state=JSON.parse(JSON.stringify(state));render()');
+assert.equal(read('wellSwapTime(state.wells[0],derive())'),null,'Saving and reloading retains the manual-cadence exclusion');
 console.log('PASS: multi-well setup, original data preservation, independent targets, chained schedules, persisted collapses, per-well WellView export, phase insertion, count-reduction warning/Undo, and confirmed clear/start-from-blank.');

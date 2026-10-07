@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Create a populated offline Time Planner from per-well phase selections.">
+<title>Time Planner Builder</title>
+<style>
+:root{color-scheme:light;--red:#c80019;--blue:#124887;--ink:#223345;--muted:#5f6e7d;--line:#ccd5df;--paper:#f3f5f8;--soft:#edf3fa}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}button,input,select{font:inherit}header{background:white;border-top:4px solid var(--red);border-bottom:1px solid var(--line);padding:20px 28px}header h1{margin:0;color:var(--red);font-size:24px;letter-spacing:-.5px}header p{margin:5px 0 0;color:var(--muted);font-size:14px}main{max-width:1280px;padding:24px 28px 40px;margin:auto}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:22px;align-items:start}.section{margin-bottom:20px;background:white;border:1px solid var(--line);border-radius:5px;overflow:hidden}.section-title{margin:0;padding:12px 18px;font-size:17px;background:var(--blue);color:white;font-weight:600}.section-body{padding:18px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:550}.field.wide{grid-column:1/-1}.field input,.field select{min-width:0;width:100%;padding:9px 10px;border:1px solid #abb9c8;border-radius:3px;background:white;color:var(--ink);font-size:15px;min-height:42px}.field small{font-weight:400;color:var(--muted);font-size:12px}.field input:focus,.field select:focus{outline:2px solid var(--blue);outline-offset:1px}fieldset{min-width:0;border:1px solid var(--line);border-radius:3px;padding:16px;margin:0 0 18px}fieldset:last-child{margin-bottom:0}legend{font-size:15px;font-weight:650;color:var(--blue);padding:0 7px}.fixed-target{font-size:13px;color:var(--muted);margin:14px 0 0}.future{padding:17px 18px;border-top:1px dashed var(--line);color:var(--muted);font-size:14px}.future h3{font-size:14px;margin:0 0 4px;color:var(--ink)}.future p{margin:0}.summary{position:sticky;top:20px;background:white;border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:4px;padding:18px}.summary h2{margin:0 0 16px;font-size:18px}.counts{display:flex;gap:24px;border-bottom:1px solid var(--line);padding-bottom:15px;margin-bottom:15px}.counts strong{display:block;color:var(--blue);font-size:26px}.counts span{font-size:13px;color:var(--muted)}.phase-list{margin:0 0 18px;padding:0;list-style:none;font-size:14px;color:var(--muted)}.phase-list li{padding:5px 0;border-bottom:1px solid #e7ecf2}.summary .caption{font-size:13px;margin:14px 0 5px;color:var(--muted)}.target-list{list-style:none;margin:0;padding:0;font-size:14px}.target-list li{display:flex;gap:12px;justify-content:space-between;padding:7px 0;border-bottom:1px solid #e7ecf2}.target-list span{overflow-wrap:anywhere}.target-list strong{white-space:nowrap}.summary-total{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin:12px 0 18px}.summary-total strong{white-space:nowrap}button{cursor:pointer;border:1px solid var(--red);border-radius:3px;padding:11px 14px;font-weight:600;color:white;background:var(--red)}button:hover{background:#a80015}button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:3px}.create{width:100%}.summary-note{font-size:13px;color:var(--muted);margin:12px 0 0}.message{font-size:14px;border:1px solid #bad3c3;background:#f0f8f3;padding:12px;margin:16px 0 0;border-radius:3px}.message p{margin:0 0 8px}.message a{display:block;margin-top:6px;color:var(--blue);font-weight:600}.error{color:#970016;background:#fff0f1;border-color:#df9ea8}.job-caption{font-size:14px;color:var(--muted);margin:0 0 12px;overflow-wrap:anywhere}[hidden]{display:none!important}
+@media(max-width:860px){.workspace{grid-template-columns:1fr}.summary{position:static}.phase-list{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}}@media(max-width:580px){header{padding:16px}main{padding:16px}.grid{grid-template-columns:1fr 1fr}.job-grid{grid-template-columns:1fr}.section-body{padding:14px}.field.wide{grid-column:1/-1}}@media(max-width:380px){.grid{grid-template-columns:1fr}}
+</style>
+<style>
+.phase-settings{margin-top:20px;border-top:1px solid var(--line)}.phase-config{border-bottom:1px solid var(--line)}.phase-config>summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;padding:12px 2px;color:var(--blue);font-size:15px;font-weight:650;list-style:none}.phase-config>summary>span:before{content:'▸';display:inline-block;width:17px}.phase-config[open]>summary>span:before{content:'▾'}.phase-config>summary strong{white-space:nowrap}.phase-body{padding:4px 2px 16px}.phase-body .field small{min-height:30px}.phase-body>p:first-child{margin-top:0}.method{font-weight:450;font-size:13px}.timelog-preview{margin-top:14px;background:var(--soft);border:1px solid var(--line);border-radius:3px}.timelog-preview>summary{cursor:pointer;font-size:13px;padding:8px 10px;color:var(--ink)}.preview-scroll{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;vertical-align:top;padding:7px 9px;border-bottom:1px solid var(--line)}th{background:#dae6f4}td:first-child{white-space:nowrap}td:nth-child(2){white-space:nowrap;text-align:right}summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+</style>
+</head>
+<body>
+<header><h1>Time Planner Builder</h1><p>Choose the variables for each phase, then create the populated planner.</p></header>
+<main>
+<form id="builderForm" class="workspace" novalidate>
+<div>
+<section class="section"><h2 class="section-title">Job setup</h2><div class="section-body grid job-grid">
+<label class="field">Rig<input id="rig" name="rig" autocomplete="off" placeholder="e.g. Ranger 8549"><small>Optional</small></label>
+<label class="field">Job start<input id="jobStart" name="start" type="datetime-local" required></label>
+<label class="field">Number of wells<input id="wellCount" name="wellCount" type="number" min="1" step="1" value="1" required></label>
+</div></section>
+<section class="section"><h2 class="section-title">Well details &amp; phase setup</h2><div class="section-body" id="wellFields"></div></section>
+</div>
+<aside class="summary" aria-label="Planner summary"><h2>Your planner</h2><p id="jobCaption" class="job-caption">Enter a job start to begin.</p><div class="counts"><div><strong id="wellTotal">1</strong><span>wells</span></div><div><strong id="phaseTotal">6</strong><span>phases</span></div></div>
+<p class="caption">Phases for each well</p><ol class="phase-list"><li>Pre Ops</li><li>Trip in Hole</li><li>Drill Out</li><li>TOH</li><li>Set Production</li><li>Post Ops</li></ol>
+<p class="caption">Well target hours</p><ul id="targetList" class="target-list"></ul><div class="summary-total"><span>Total job target</span><strong id="targetTotal">—</strong></div>
+<button id="createBtn" class="create" type="submit">Create planner</button><p class="summary-note">Use Chrome to download and open the populated planner. Import a loader to replace the Drill Out planning row. Both files work offline.</p>
+<div id="error" class="message error" role="alert" hidden></div>
+<div id="created" class="message" role="status" hidden><p id="createdMessage"></p><a id="openPlanner" target="_blank" rel="noopener">Open created planner</a><a id="downloadPlanner">Download again</a></div>
+</aside>
+</form>
+</main>
+<!-- PLANNER_TEMPLATE -->
+<!-- BUILDER_ENGINE -->
+<script data-builder-ui>
+'use strict';
+const byId = id => document.getElementById(id);
+const template = PlannerBuilder.readTemplate(byId('planner-template').textContent);
+const escape = PlannerBuilder.escapeHtml;
+const wellDrafts = [];
+let wellCount = 1, createdUrl = null;
+const blankDraft = index => ({title:'',formation:'',lateral:'',spacing:'',plugs:'',post:'8',preFirst:index===0?'yes':'no',preSplit:'no',motorBha:'no',tihSplit:'no',tihAphron:'no',drillAphron:'no',tohSplit:'no',tohSnub:'no',tohKill:'10 KWF',production:''});
+const toNumber = value => value === '' ? NaN : Number(value);
+function activeWells() {
+  return wellDrafts.slice(0, wellCount).map(well => ({title:well.title,formation:well.formation,lateral:toNumber(well.lateral),spacing:toNumber(well.spacing),plugs:toNumber(well.plugs),post:toNumber(well.post),phaseSelections:{preOps:{firstWell:well.preFirst==='yes',splitString:well.preSplit==='yes',motorBha:well.motorBha==='yes'},tih:{splitString:well.tihSplit==='yes',aphron:well.tihAphron==='yes'},drillOut:{aphron:well.drillAphron==='yes'},toh:{splitString:well.tohSplit==='yes',snub:well.tohSnub==='yes',killMethod:well.tohKill},setProduction:{method:well.production}}}));
+}
+function phaseFields(well,index) {
+  const yesNo = (key,label,note) => `<label class="field">${label}<select data-well="${index}" data-key="${key}" aria-label="Well ${index+1} ${label}"><option value="yes" ${well[key]==='yes'?'selected':''}>Yes</option><option value="no" ${well[key]==='no'?'selected':''}>No</option></select><small>${note}</small></label>`;
+  const fields = [
+    `<div class="grid">${yesNo('preFirst','Pre Ops · 1st Well?','Yes: 8 h base. No: 4 h base.')}${yesNo('preSplit','Pre Ops · Split String?','Yes: +0.50 h on TEST_BOP.')}${yesNo('motorBha','Pre Ops · Motor BHA?','Yes: +0.50 h on WOV_BHA.')}</div><p class="fixed-target" id="preBasis-${index}"></p>`,
+    `<div class="grid">${yesNo('tihSplit','TIH · Split String?','Yes: adds a 0.75 h workstring-swap row.')}${yesNo('tihAphron','TIH · Aphron?','Yes: includes circulating Aphron to surface.')}</div>`,
+    `<div class="grid">${yesNo('drillAphron','Drill Out · Aphron?','Selects the circulation comment with or without Aphron displacement.')}</div><p class="fixed-target">Import a loader to replace the WOV_DOP planning row. Circulation and the POOH pre-task brief remain at the end of Drill Out.</p>`,
+    `<div class="grid">${yesNo('tohSplit','TOH · Split String?','Yes: adds a 0.75 h workstring-swap row ending with “Cont. TOH.”')}${yesNo('tohSnub','TOH · Snub?','Yes: uses the four-row snubbing sequence.')}<label class="field">TOH · Kill method<select data-well="${index}" data-key="tohKill" aria-label="Well ${index+1} TOH kill method" ${well.tohSnub==='yes'?'disabled':''}>${['10 KWF','Top Kill'].map(method=>`<option value="${escape(method)}" ${well.tohKill===method?'selected':''}>${escape(method)}</option>`).join('')}</select><small>Used when Snub is No.</small></label></div>`,
+    `<label class="field">Production method<select data-well="${index}" data-key="production" aria-label="Well ${index+1} Set Production method" required><option value="">Choose…</option>${PlannerBuilder.productionMethods.map(method=>`<option value="${escape(method)}" ${well.production===method?'selected':''}>${escape(method)}</option>`).join('')}</select></label><p class="fixed-target">24 h planning allowance. Detailed Set Production activities will be defined next.</p>`,
+    `<label class="field">Post Ops target (hr)<input type="number" data-well="${index}" data-key="post" aria-label="Well ${index+1} Post Ops target (hr)" min="0" step="any" value="${escape(well.post)}" required></label>`
+  ];
+  return PlannerBuilder.phaseTypes.map((type,phaseIndex)=>`<details class="phase-config" ${phaseIndex===0?'open':''}><summary><span>${escape(PlannerBuilder.phaseLabel(type))}<span class="method" id="phase-method-${index}-${phaseIndex}"></span></span><strong id="phase-hours-${index}-${phaseIndex}">—</strong></summary><div class="phase-body">${fields[phaseIndex]}<details class="timelog-preview"><summary>Timelog preview <span id="phase-count-${index}-${phaseIndex}"></span></summary><div class="preview-scroll"><table><thead><tr><th>Ops</th><th>Planned h</th><th>Com</th></tr></thead><tbody id="phase-preview-${index}-${phaseIndex}"></tbody></table></div></details></div></details>`).join('');
+}
+function renderWells() {
+  while (wellDrafts.length < wellCount) wellDrafts.push(blankDraft(wellDrafts.length));
+  const numberField = (index, key, label, value) => `<label class="field">${label}<input type="number" data-well="${index}" data-key="${key}" aria-label="Well ${index+1} ${label}" min="${key==='plugs'?'1':key==='pre'||key==='post'?'0':'0.00000001'}" step="${key==='plugs'?'1':'any'}" value="${escape(value)}" required></label>`;
+  byId('wellFields').innerHTML = wellDrafts.slice(0,wellCount).map((well,index) => `<fieldset><legend>Well ${index+1}</legend><div class="grid"><label class="field wide">Well name<input data-well="${index}" data-key="title" aria-label="Well ${index+1} name" value="${escape(well.title)}" required autocomplete="off"></label><label class="field">Formation<select data-well="${index}" data-key="formation" aria-label="Well ${index+1} Formation" required><option value="">Choose…</option>${template.seed.refs.map(ref=>`<option value="${escape(ref.formation)}" ${well.formation===ref.formation?'selected':''}>${escape(ref.formation)}</option>`).join('')}</select></label>${numberField(index,'lateral','Lateral length (ft)',well.lateral)}${numberField(index,'spacing','Plug spacing (ft)',well.spacing)}${numberField(index,'plugs','Plug count',well.plugs)}</div><div class="phase-settings">${phaseFields(well,index)}</div></fieldset>`).join('');
+  renderSummary();
+}
+function renderSummary() {
+  byId('wellTotal').textContent=wellCount;
+  byId('phaseTotal').textContent=wellCount*PlannerBuilder.phaseTypes.length;
+  const start=byId('jobStart').value,rig=byId('rig').value.trim();
+  byId('jobCaption').textContent=[rig,start?start.replace('T',' '):'Enter a job start to begin.'].filter(Boolean).join(' · ');
+  const totals=activeWells().map((well,index)=>{
+    const setup=PlannerBuilder.planningSetup(well,index),plans=PlannerBuilder.phasePlans(template.seed,well,index),targets=plans.map(phase=>phase.target);
+    plans.forEach((phase,phaseIndex)=>{
+      byId(`phase-hours-${index}-${phaseIndex}`).textContent=Number.isFinite(phase.target)?phase.target.toFixed(2)+' h':'—';
+      byId(`phase-method-${index}-${phaseIndex}`).textContent=phase.productionMethod?' · '+phase.productionMethod:'';
+      byId(`phase-count-${index}-${phaseIndex}`).textContent='· '+phase.rows.length+' '+(phase.rows.length===1?'row':'rows');
+      byId(`phase-preview-${index}-${phaseIndex}`).innerHTML=phase.rows.map(row=>`<tr><td>${escape(row.code)}</td><td>${Number.isFinite(row.duration)?row.duration.toFixed(2):'—'}</td><td>${escape(row.com)}</td></tr>`).join('');
+    });
+    document.querySelector(`[data-well="${index}"][data-key="tohKill"]`).disabled=wellDrafts[index].tohSnub==='yes';
+    byId(`preBasis-${index}`).textContent=(setup.phaseSelections.preOps.firstWell?'8':'4')+' h base + '+(setup.pre-(setup.phaseSelections.preOps.firstWell?8:4)).toFixed(2)+' h selected additions = '+setup.pre.toFixed(2)+' h.';
+    return well.formation&&Number.isFinite(well.lateral)&&well.lateral>0&&targets.every(value=>Number.isFinite(value)&&value>=0)?targets.reduce((sum,value)=>sum+value,0):null;
+  });
+  byId('targetList').innerHTML=activeWells().map((well,index)=>`<li><span>${escape(well.title||'Well '+(index+1))}</span><strong>${totals[index]===null?'—':totals[index].toFixed(2)+' h'}</strong></li>`).join('');
+  byId('targetTotal').textContent=totals.every(value=>value!==null)?totals.reduce((sum,value)=>sum+value,0).toFixed(2)+' h':'—';
+}
+function changed() {
+  byId('created').hidden=true;byId('error').hidden=true;
+  renderSummary();
+}
+byId('wellFields').addEventListener('input',event=>{
+  const {well,key}=event.target.dataset;
+  if(well===undefined||!key)return;
+  wellDrafts[Number(well)][key]=event.target.value;changed();
+});
+function updateWellCount() {
+  const requested=Number(byId('wellCount').value);
+  if(!Number.isInteger(requested)||requested<1||requested===wellCount)return;
+  wellCount=requested;renderWells();changed();
+}
+byId('wellCount').addEventListener('input',updateWellCount);byId('wellCount').addEventListener('change',updateWellCount);
+byId('rig').addEventListener('input',changed);byId('jobStart').addEventListener('input',changed);
+byId('builderForm').addEventListener('submit',event=>{
+  event.preventDefault();byId('error').hidden=true;
+  const invalid=byId('builderForm').querySelector('input:invalid,select:invalid,textarea:invalid');
+  if(invalid){
+    for(let parent=invalid.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+    invalid.reportValidity();return;
+  }
+  try {
+    if(Number(byId('wellCount').value)!==wellCount)throw new Error('Finish choosing the number of wells before creating the planner.');
+    const result=PlannerBuilder.create(template,{rig:byId('rig').value,start:byId('jobStart').value,wells:activeWells()});
+    const url=URL.createObjectURL(new Blob([result.html],{type:'text/html;charset=utf-8'}));
+    if(createdUrl)URL.revokeObjectURL(createdUrl);createdUrl=url;
+    byId('openPlanner').href=url;byId('downloadPlanner').href=url;byId('downloadPlanner').download=result.filename;
+    byId('downloadPlanner').click();
+    byId('createdMessage').textContent='Created '+wellCount+' '+(wellCount===1?'well':'wells')+' with '+result.state.phases.length+' phases. Your planner is downloading.';
+    byId('created').hidden=false;
+  } catch(error) {byId('error').textContent=error.message;byId('error').hidden=false;}
+});
+renderWells();
+</script>
+</body>
+</html>

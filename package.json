@@ -4,6 +4,8 @@
   "private": true,
   "description": "Offline phase-based operations time planner and WellView export tool",
   "scripts": {
+    "build:builder": "node scripts/build-builder.mjs",
+    "pretest": "node scripts/build-builder.mjs",
     "test": "node --test tests/*.mjs"
   },
   "engines": {
