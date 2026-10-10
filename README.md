@@ -14,10 +14,10 @@ Open **`builder.html`** in Chrome to enter the rig, job start, number of wells a
 
 The builder and generated planner work offline without other files. Phase choices are independent for each well:
 
-- **Pre Ops:** always includes the seven BOP and MIRU Rig default rows from **TimeLog Building Ingrdients.xlsx**, followed by exactly one BHA row selected by Motor BHA. 1st Well uses an 8-hour base; No uses 4 hours. Split String adds 0.50 hour to `TEST_BOP`; Motor BHA adds 0.50 hour to `WOV_BHA`. Both additions produce 9 or 5 hours respectively. Only the first well defaults to Yes for 1st Well.
-- **Trip in Hole:** always includes all five TIH default rows, including the Washington rubber/float test. Aphron Yes adds the circulation row; No omits it. Split String retains its additional 0.75-hour workstring-swap row ending with “Cont. TIH.”
-- **Drill Out:** includes the loader planning row, one circulation row selected by Aphron Yes/No, and the default POOH pre-task brief. Importing recorded activities replaces only the loader planning row; the circulation and brief remain at the end even when the import extends past the original forecast.
-- **TOH:** Snub No selects exactly one 10 KWF or Top Kill row. Snub Yes uses the four snubbing rows instead, with the sheet's 12 : 0.25 : 1.25 : 3 weights. The kill-method selector is disabled while snubbing is selected. Split String retains its additional 0.75-hour workstring-swap row ending with “Cont. TOH.”
+- **Pre Ops:** always includes the seven BOP and MIRU Rig default rows from **TimeLog Building Ingrdients.xlsx**, followed by exactly one BHA row selected by Motor BHA. 1st Well uses an 8-hour base; No uses 4 hours. Motor BHA adds 0.50 hour to `WOV_BHA`, producing 8.5 or 4.5 hours respectively. Only the first well defaults to Yes for 1st Well.
+- **Trip in Hole:** always includes all five TIH default rows, including the Washington rubber/float test.
+- **Drill Out:** includes the loader planning row, the standard circulation row, and the default POOH pre-task brief. Importing recorded activities replaces only the loader planning row; the circulation and brief remain at the end even when the import extends past the original forecast.
+- **TOH:** Snub No selects exactly one 10 KWF or Top Kill row. Snub Yes uses the four snubbing rows instead, with the sheet's 12 : 0.25 : 1.25 : 3 weights. The kill-method selector is disabled while snubbing is selected.
 - **Set Production:** select HPGL, CGL, ESP & ESP-HR, or GAPL. The method is saved on the phase; one row holds the existing 24-hour planning allowance until detailed production rules are supplied.
 - **Post Ops:** enter the target hours; the normal template is scaled to that duration.
 
@@ -69,7 +69,7 @@ Both apps use the supplied **Midland Current Targets** image:
 | WCB | 7 | 8,500 | 8,500 | 8,500 | 7,500 | 7,000 |
 | WCC, WCD, Barnett, Woodford | 3 | 12,500 | 12,500 | 10,000 | 7,500 | 5,500 |
 
-TOOH hours for all formations are **9.3, 9.3, 10.8, 11.9, 14** across those same five bands. A length exactly at a band boundary uses the band starting there. Existing aliases retain their mapping: MS → MSS; WFMP A1–A3 → WCA; WFMP B1–B3 → WCB; WFMP D → WCD. Selected split strings add 0.75 hour to TIH and TOH.
+TOOH hours for all formations are **9.3, 9.3, 10.8, 11.9, 14** across those same five bands. A length exactly at a band boundary uses the band starting there. Existing aliases retain their mapping: MS → MSS; WFMP A1–A3 → WCA; WFMP B1–B3 → WCB; WFMP D → WCD.
 
 The example planner's row targets use these values. Restoring a browser draft with older tables updates its TIH, Drill Out and TOH targets using saved allocation weights, while retaining its schedule and notes. Save the restored planner to carry the updated targets into its portable HTML copy.
 

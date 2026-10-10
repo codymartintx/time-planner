@@ -4,24 +4,30 @@ const PlannerBuilder = (() => {
   const dataPattern = /<script type="application\/json" id="planner-data">([\s\S]*?)<\/script>/;
   const round = value => Math.round(value * 1e8) / 1e8;
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const id = () => crypto.randomUUID();
+  // LAN HTTP pages lack randomUUID, but still expose getRandomValues.
+  const id = () => {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+  };
   const productionMethods = ['HPGL', 'CGL', 'ESP & ESP-HR', 'GAPL'];
   const phaseLabel = type => type === 'Trip Out of Hole' ? 'TOH' : type;
 
   function selections(well, index = 0) {
     const chosen = well.phaseSelections || {};
     return {
-      preOps: {firstWell: chosen.preOps?.firstWell ?? index === 0, splitString: chosen.preOps?.splitString ?? false, motorBha: chosen.preOps?.motorBha ?? false},
-      tih: {splitString: chosen.tih?.splitString ?? false, aphron: chosen.tih?.aphron ?? false},
-      drillOut: {aphron: chosen.drillOut?.aphron ?? false},
-      toh: {splitString: chosen.toh?.splitString ?? false, snub: chosen.toh?.snub ?? false, killMethod: chosen.toh?.killMethod || '10 KWF'},
+      preOps: {firstWell: chosen.preOps?.firstWell ?? index === 0, motorBha: chosen.preOps?.motorBha ?? false},
+      toh: {snub: chosen.toh?.snub ?? false, killMethod: chosen.toh?.killMethod || '10 KWF'},
       setProduction: {method: chosen.setProduction?.method || ''}
     };
   }
 
   function planningSetup(well, index = 0) {
     const variables = selections(well, index);
-    return {...well, pre: (variables.preOps.firstWell ? 8 : 4) + (variables.preOps.splitString ? 0.5 : 0) + (variables.preOps.motorBha ? 0.5 : 0), prod: 24, phaseSelections: variables};
+    return {...well, pre: (variables.preOps.firstWell ? 8 : 4) + (variables.preOps.motorBha ? 0.5 : 0), prod: 24, phaseSelections: variables};
   }
 
   function readTemplate(encoded) {
@@ -35,8 +41,8 @@ const PlannerBuilder = (() => {
     const ref = seed.refs.find(item => item.formation === setup.formation);
     const band = [8500, 11500, 13500, 17500].filter(limit => setup.lateral >= limit).length;
     const rate = ref?.rates[band];
-    const tih = ref ? ref.tih + (setup.phaseSelections?.tih?.splitString ? 0.75 : 0) : null;
-    const toh = ref ? ref.tooh[band] + (setup.phaseSelections?.toh?.splitString ? 0.75 : 0) : null;
+    const tih = ref ? ref.tih : null;
+    const toh = ref ? ref.tooh[band] : null;
     return [setup.pre, tih, rate > 0 ? round(setup.lateral / rate * 24) : null, toh, 24, setup.post];
   }
 
@@ -61,24 +67,30 @@ const PlannerBuilder = (() => {
     });
   }
 
+const verificationCues = {TEST_BOP: 'W01 Well Control Readiness Check in Novara/KPA'};
+function productionLogisticsCue(code, method) {
+  if (code !== 'WOV_POOH') return '';
+  if (method === 'CGL' || method === 'HPGL') return `Dispatch ${method} vendors:\n- Spooler for CT line\n- GL equipment and personnel\n- Torque & Test`;
+  if (['ESP', 'ESP-HR', 'ESP & ESP-HR'].includes(method)) return 'Dispatch ESP vendors:\n- Dual Spooler for CT line & ESP Cable\n- ESP equipment and personnel\n- ESP Consultant\n- Torque & Test';
+  return '';
+}
+
   function phasePlans(seed, well, index = 0) {
     const setup = planningSetup(well, index), chosen = setup.phaseSelections, targets = phaseTargets(seed, setup);
     const pre = normalRows(seed, 'Pre Ops', chosen.preOps.firstWell ? 8 : 4, chosen);
     for (const [enabled, code, note] of [
-      [chosen.preOps.splitString, 'TEST_BOP', 'Allow an additional 0.50 hr for the split string.'],
       [chosen.preOps.motorBha, 'WOV_BHA', 'Allow an additional 0.50 hr to make up the motor BHA.']
     ]) if (enabled) {
       const row = pre.find(item => item.code === code);
       row.duration = round(row.duration + 0.5); row.target = row.duration; row.targetWeightHours = row.duration;
       if (code === 'TEST_BOP') row.com += ' ' + note;
     }
-    const tih = normalRows(seed, 'Trip in Hole', targets[1] === null ? null : round(targets[1] - (chosen.tih.splitString ? 0.75 : 0)), chosen);
-    const toh = normalRows(seed, 'Trip Out of Hole', targets[3] === null ? null : round(targets[3] - (chosen.toh.splitString ? 0.75 : 0)), chosen);
-    if (chosen.tih.splitString) tih.splice(1, 0, activity(seed, 'WOV_RIH', 0.75, 'Swap from 2-3/8" to 2-7/8" workstring and handling equipment. V&V elevators. Cont. TIH.', {builderActivity:'split-string'}));
-    if (chosen.toh.splitString) toh.push(activity(seed, 'WOV_POOH', 0.75, 'Swap from 2-3/8" to 2-7/8" workstring and handling equipment. V&V elevators. Cont. TOH.', {builderActivity:'split-string'}));
+    const tih = normalRows(seed, 'Trip in Hole', targets[1], chosen);
+    const toh = normalRows(seed, 'Trip Out of Hole', targets[3], chosen);
     const drill = normalRows(seed, 'Drill Out', targets[2], chosen);
     const production = [activity(seed, 'RURD_RUNPROD', 24, 'Set Production' + (chosen.setProduction.method ? ' — ' + chosen.setProduction.method : '') + '. Planning allowance; detailed activities to be defined.', {planningPlaceholder:'set-production'})];
     const rows = [pre, tih, drill, toh, production, normalRows(seed, 'Post Ops', setup.post)];
+    rows.flat().forEach(row => {row.logistics = productionLogisticsCue(row.code, chosen.setProduction.method); row.sshe = verificationCues[row.code] || ''});
     return phaseTypes.map((type, phaseIndex) => ({type, name:phaseLabel(type), target:targets[phaseIndex], rows:rows[phaseIndex], ...(type==='Set Production'?{productionMethod:chosen.setProduction.method}:{}), builderGenerated:true}));
   }
 
@@ -100,7 +112,7 @@ const PlannerBuilder = (() => {
         if (!Number.isFinite(well[key]) || well[key] < 0) throw new Error(label + ': target hours must be zero or positive.');
       }
       const chosen = selections(well, index);
-      for (const value of [chosen.preOps.firstWell, chosen.preOps.splitString, chosen.preOps.motorBha, chosen.tih.splitString, chosen.tih.aphron, chosen.drillOut.aphron, chosen.toh.splitString, chosen.toh.snub]) {
+      for (const value of [chosen.preOps.firstWell, chosen.preOps.motorBha, chosen.toh.snub]) {
         if (typeof value !== 'boolean') throw new Error(label + ': choose Yes or No for each phase variable.');
       }
       if (!['10 KWF', 'Top Kill'].includes(chosen.toh.killMethod)) throw new Error(label + ': choose a TOH kill method.');

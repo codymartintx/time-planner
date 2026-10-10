@@ -145,18 +145,6 @@
       "weight": 0.5,
       "com": "Break circulation. Pressure test Washington rubber to 1,500 psi & negative test Float Valves to 1,500 psi - good test on both",
       "when": {}
-    },
-    {
-      "ingredientRow": 22,
-      "label": "TIH Yes Aphron",
-      "code": "WOV_CIRC",
-      "category": "WORKOVER",
-      "desc": "CIRCULATE",
-      "weight": 0.5,
-      "com": "Circulate Aphron to surface before cont. TIH to KP.",
-      "when": {
-        "tih.aphron": true
-      }
     }
   ],
   "Drill Out": [
@@ -172,29 +160,13 @@
       "planningPlaceholder": "drill-out"
     },
     {
-      "ingredientRow": 26,
-      "label": "Drill out Yes Aphron",
-      "code": "WOV_CIRC",
-      "category": "WORKOVER",
-      "desc": "CIRCULATE",
-      "weight": 0.5,
-      "com": "TD well at XX,XXX';  CWC & displaced Aphron.\nMarker on surface; PU w/o rotation: XX k-lb.",
-      "when": {
-        "drillOut.aphron": true
-      },
-      "builderActivity": "drill-out-follow-up"
-    },
-    {
       "ingredientRow": 27,
-      "label": "Drill out No Aphron",
+      "label": "Drill out circulation",
       "code": "WOV_CIRC",
       "category": "WORKOVER",
       "desc": "CIRCULATE",
       "weight": 0.5,
       "com": "TD well at XX,XXX';  CWC\nMarker on surface; PU w/o rotation: XX k-lb.",
-      "when": {
-        "drillOut.aphron": false
-      },
       "builderActivity": "drill-out-follow-up"
     },
     {

@@ -12,17 +12,15 @@ function get(id){
 get('wellCount').value='1';
 get('planner-template').textContent=html.match(/id="planner-template">([\s\S]*?)<\/script>/)[1];
 let createdBlob;
-const context={crypto:crypto.webcrypto,structuredClone,TextDecoder,Uint8Array,atob,Date,Blob,URL:{createObjectURL(blob){createdBlob=blob;return 'blob:test-planner'},revokeObjectURL(){}},document:{getElementById:get,querySelector:get}};
+const context={crypto:{getRandomValues:values=>crypto.webcrypto.getRandomValues(values)},structuredClone,TextDecoder,Uint8Array,atob,Date,Blob,URL:{createObjectURL(blob){createdBlob=blob;return 'blob:test-planner'},revokeObjectURL(){}},document:{getElementById:get,querySelector:get}};
 vm.createContext(context);
 vm.runInContext(html.match(/<script data-builder-engine>([\s\S]*?)<\/script>/)[1],context);
 vm.runInContext(html.match(/<script data-builder-ui>([\s\S]*?)<\/script>/)[1],context);
 const read=expression=>vm.runInContext(expression,context);
 const change=(well,key,value)=>get('wellFields').events.input({target:{dataset:{well:String(well),key},value}});
 
-assert(get('wellFields').innerHTML.includes('TIH · Aphron?'));
-assert(get('wellFields').innerHTML.includes('Drill Out · Aphron?'));
-assert(get('wellFields').innerHTML.includes('TOH · Snub?'));
-assert(get('wellFields').innerHTML.includes('TOH · Kill method'));
+assert(get('wellFields').innerHTML.includes('Snub?'));
+assert(get('wellFields').innerHTML.includes('Kill method'));
 assert.equal(get('phase-count-0-0').textContent,'· 8 rows');
 assert.equal(get('phase-count-0-1').textContent,'· 5 rows');
 assert.equal(get('phase-count-0-2').textContent,'· 3 rows');
@@ -31,11 +29,8 @@ assert(get('phase-preview-0-0').innerHTML.includes('Measured &amp; MU BHA'));
 change(0,'motorBha','yes');
 assert(get('phase-preview-0-0').innerHTML.includes('Make up and function test BHA'));
 assert(!get('phase-preview-0-0').innerHTML.includes('Measured &amp; MU BHA'));
-change(0,'tihAphron','yes');
-assert.equal(get('phase-count-0-1').textContent,'· 6 rows');
-assert(get('phase-preview-0-1').innerHTML.includes('Circulate Aphron to surface'));
-change(0,'drillAphron','yes');
-assert(get('phase-preview-0-2').innerHTML.includes('displaced Aphron'));
+assert.equal(get('phase-count-0-1').textContent,'· 5 rows');
+
 change(0,'tohKill','Top Kill');
 assert(get('phase-preview-0-3').innerHTML.includes('Top kill with'));
 change(0,'tohSnub','yes');
@@ -61,13 +56,30 @@ assert.equal(get('created').hidden,false);
 assert.equal(get('downloadPlanner').clicked,true);
 const downloaded=await createdBlob.text();
 const state=JSON.parse(downloaded.match(/id="planner-data">([\s\S]*?)<\/script>/)[1]);
-assert.equal(state.wells[0].setup.phaseSelections.tih.aphron,true);
-assert.equal(state.wells[1].setup.phaseSelections.tih.aphron,false);
 assert.equal(state.phases[3].rows.length,4);
 assert.equal(state.phases[9].rows.length,1);
 assert.equal(state.phases[0].rows.at(-1).ingredientRow,15);
 assert.equal(state.phases[6].rows.at(-1).ingredientRow,14);
-assert.equal(state.phases[2].rows[1].ingredientRow,26);
+assert.equal(state.phases[2].rows[1].ingredientRow,27);
 assert.equal(state.phases[8].rows[1].ingredientRow,27);
 assert.equal(read('activeWells()[0].phaseSelections.toh.killMethod'),'Top Kill');
 console.log('PASS: actual builder UI handlers update previews, restore kill selection after snubbing, keep well choices independent and download the selected rows.');
+
+
+assert(!get('wellFields').innerHTML.includes('Aphron'));
+assert(!get('wellFields').innerHTML.includes('Split String'));
+
+const wellMarkup=get('wellFields').innerHTML;
+const firstPreview=wellMarkup.indexOf('<details class="timelog-preview">');
+for(const key of ['preFirst','motorBha','tohSnub','tohKill','post','production']){
+ assert(wellMarkup.indexOf('data-key="'+key+'"')<firstPreview,'Well inputs precede the preview');
+ assert.equal((wellMarkup.match(new RegExp('data-well="0" data-key="'+key+'"','g'))||[]).length,1);
+}
+assert.equal((wellMarkup.match(/<details /g)||[]).length,2,'One collapsible preview per well');
+assert(!wellMarkup.includes('class="phase-config"'));
+assert(get('phase-preview-0-0').innerHTML.includes('W01 Well Control Readiness Check'));
+
+// Exercise the complete UI on LAN HTTP, where crypto.randomUUID is unavailable.
+const ids=[state.docId,...state.wells.map(w=>w.id),...state.phases.flatMap(p=>[p.id,...p.rows.map(r=>r.id)])];
+assert.equal(new Set(ids).size,ids.length);
+assert(ids.every(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)));

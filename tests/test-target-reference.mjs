@@ -46,7 +46,7 @@ for (const group of groups) for (const formation of group.formations) {
   for (const lateral of lengths) for (const splitString of [false,true]) {
     const band = limits.filter(limit=>lateral>=limit).length;
     const setup = {formation,lateral,pre:8,post:8,phaseSelections:{tih:{splitString},toh:{splitString}}};
-    const addition = splitString?0.75:0;
+    const addition = 0; // Retired flags no longer affect targets.
     const expected = [8,group.tih+addition,round(lateral/group.rates[band]*24),tooh[band]+addition,24,8];
     app.context.setup = setup;builderContext.setup = setup;
     const actual = app.read('calculateTargets(setup)');
@@ -74,7 +74,7 @@ const restored = planner(draft);
 restored.get('restoreDraft').onclick();
 assert.deepEqual(JSON.parse(restored.read('JSON.stringify(state.refs)')),seed.refs);
 assert.equal(restored.read('state.targetReference.revision'),seed.targetReference.revision);
-assert.equal(restored.read('state.phases.at(-2).rows[0].target'),14.75);
+assert.equal(restored.read('state.phases.at(-2).rows[0].target'),14);
 assert.equal(restored.read('state.phases.at(-2).rows[0].targetWeightHours'),2);
 assert.equal(restored.read('phaseTarget(state.phases.at(-1))'),round(18000/5500*24));
 const after = JSON.parse(restored.read('JSON.stringify(state.phases)'));
@@ -94,4 +94,4 @@ const saved = JSON.parse(restored.read('JSON.stringify(state)'));
 const reopened = planner(null,saved);
 assert.equal(reopened.read('state.phases[1].rows[0].target'),123);
 assert.equal(reopened.read('calculateTargets(state.wells[1].setup).rate'),5500);
-console.log('PASS: Midland targets match the image for every formation, alias and lateral boundary in both apps, with split additions, row allocation and older-draft preservation.');
+console.log('PASS: Midland targets match the image for every formation, alias and lateral boundary in both apps, without retired split additions, row allocation and older-draft preservation.');

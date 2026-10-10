@@ -34,7 +34,7 @@ assert(result.state.wells.every(well=>well.standardCadence));
 assert.equal(result.state.wells[1].setup.formation,'WCC');
 assert.equal(result.state.wells[1].setup.pre,4);assert.equal(result.state.wells[1].setup.post,6);
 assert.equal(result.state.wells[1].setup.prod,24);
-assert.equal(result.state.setup.pre,9);
+assert.equal(result.state.setup.pre,8.5);
 assert.equal(result.state.phases[3].name,'TOH');
 assert.equal(result.state.phases[4].productionMethod,'HPGL');
 assert.equal(result.state.phases[10].productionMethod,'ESP & ESP-HR');
@@ -42,19 +42,15 @@ assert.equal(result.state.phases[2].rows.length,3);
 assert.equal(result.state.phases[2].rows[0].code,'WOV_DOP');
 assert.equal(result.state.phases[2].rows[0].duration,27.93988235);
 assert.equal(result.state.phases[2].rows[0].planningPlaceholder,'drill-out');
-assert.equal(result.state.phases[1].rows.find(row=>row.builderActivity==='split-string').duration,0.75);
-assert(result.state.phases[1].rows.some(row=>row.com.endsWith('Cont. TIH.')));
-assert(result.state.phases[3].rows.some(row=>row.com.endsWith('Cont. TOH.')));
-assert(!result.state.phases[9].rows.some(row=>row.builderActivity==='split-string'));
 // Workbook defaults are unconditional. Alternatives are mutually exclusive and
 // every well uses its own phase choices, including all combinations of Yes/No.
-for (const motorBha of [false,true]) for (const tihAphron of [false,true]) for (const drillAphron of [false,true]) for (const snub of [false,true]) for (const killMethod of ['10 KWF','Top Kill']) {
-  context.ingredientsWell={...context.configuration.wells[0],phaseSelections:{preOps:{firstWell:true,motorBha},tih:{aphron:tihAphron},drillOut:{aphron:drillAphron},toh:{snub,killMethod},setProduction:{method:'HPGL'}}};
+for (const motorBha of [false,true]) for (const snub of [false,true]) for (const killMethod of ['10 KWF','Top Kill']) {
+  context.ingredientsWell={...context.configuration.wells[0],phaseSelections:{preOps:{firstWell:true,motorBha},toh:{snub,killMethod},setProduction:{method:'HPGL'}}};
   const plans=read('PlannerBuilder.phasePlans(template.seed,ingredientsWell)');
   const ingredientRows=phase=>Array.from(phase.rows,row=>row.ingredientRow);
   assert.deepEqual(ingredientRows(plans[0]),[4,5,6,8,9,10,11,motorBha?15:14]);
-  assert.deepEqual(ingredientRows(plans[1]),[17,18,19,20,21,...(tihAphron?[22]:[])]);
-  assert.deepEqual(ingredientRows(plans[2]),[24,drillAphron?26:27,28]);
+  assert.deepEqual(ingredientRows(plans[1]),[17,18,19,20,21]);
+  assert.deepEqual(ingredientRows(plans[2]),[24,27,28]);
   assert.deepEqual(ingredientRows(plans[3]),snub?[32,33,34,35]:[killMethod==='10 KWF'?30:31]);
   for (const phase of plans) {
     assert(Math.abs(phase.rows.reduce((sum,row)=>sum+row.duration,0)-phase.target)<1e-7,'Selected rows share the existing phase target');
@@ -64,19 +60,19 @@ for (const motorBha of [false,true]) for (const tihAphron of [false,true]) for (
   const bha=plans[0].rows.at(-1);
   assert(bha.com.includes(motorBha?'function test BHA':'Measured & MU BHA'));
   assert.equal(plans[1].rows.filter(row=>row.code==='TEST_SL/FLT').length,1,'TIH default includes the Washington/float test');
-  assert.equal(plans[2].rows[1].com.includes('displaced Aphron'),drillAphron);
+  assert(!plans[2].rows[1].com.includes('Aphron'));
   assert.equal(plans[2].rows.at(-1).com,'Crew conducted PTB to POOH w/ WS.');
 }
 for (const [firstWell,splitString,motorBha] of [[true,false,false],[false,false,false],[true,true,false],[false,false,true],[true,true,true]]) {
   context.combo={...context.configuration.wells[0],phaseSelections:{preOps:{firstWell,splitString,motorBha},setProduction:{method:'CGL'}}};
   const plans=read('PlannerBuilder.phasePlans(template.seed,combo)');
-  const expected=(firstWell?8:4)+(splitString?0.5:0)+(motorBha?0.5:0);
+  const expected=(firstWell?8:4)+(motorBha?0.5:0);
   assert(Math.abs(plans[0].rows.reduce((sum,row)=>sum+row.duration,0)-expected)<1e-7);
   context.noAdditions={...context.combo,phaseSelections:{preOps:{firstWell},setProduction:{method:'CGL'}}};
   const base=read('PlannerBuilder.phasePlans(template.seed,noAdditions)[0].rows');
   for(const code of ['TEST_BOP','WOV_BHA']) {
     const difference=plans[0].rows.find(row=>row.code===code).duration-base.find(row=>row.code===code).duration;
-    assert(Math.abs(difference-(code==='TEST_BOP'&&splitString||code==='WOV_BHA'&&motorBha?0.5:0))<1e-7);
+    assert(Math.abs(difference-(code==='WOV_BHA'&&motorBha?0.5:0))<1e-7);
   }
 }
 assert.equal(new Set([result.state.docId,...result.state.wells.map(well=>well.id),...result.state.phases.map(phase=>phase.id)]).size,15);
@@ -99,8 +95,8 @@ const plannerRead=expression=>vm.runInContext(expression,plannerContext);
 assert.equal(get('jobTitle').textContent,'Ranger 9000; 2 wells');
 assert.equal(plannerRead('targets().values[2]'),28.68988235);
 assert.equal(plannerRead('targets().values[8]'),17.28);
-assert.equal(plannerRead('targets().values[1]'),7.75);
-assert.equal(plannerRead('targets().values[3]'),10.05);
+assert.equal(plannerRead('targets().values[1]'),7);
+assert.equal(plannerRead('targets().values[3]'),9.3);
 assert.equal(plannerRead('wellSwapTime(state.wells[0],derive())'),plannerRead('derive()[2].at(-1).computedEnd'));
 assert(plannerRead('derive().flat().every(row=>!row.error&&valid(row.computedDuration))'));
 assert.equal(plannerRead('performance(derive().flat()).attainment'),100);
@@ -116,8 +112,8 @@ const setupValues=plannerRead("new Map([['wellCount',String(state.wells.length)]
 plannerContext.FormData=class{constructor(values){this.values=values}get(key){return this.values.get(key)}};
 get('setupForm').onsubmit({preventDefault(){},target:setupValues});
 assert.deepEqual(JSON.parse(plannerRead('JSON.stringify(state.wells[0].setup.phaseSelections)')),JSON.parse(JSON.stringify(result.state.wells[0].setup.phaseSelections)));
-assert.equal(plannerRead('targets().values[1]'),7.75);
-assert.equal(plannerRead('targets().values[3]'),10.05);
+assert.equal(plannerRead('targets().values[1]'),7);
+assert.equal(plannerRead('targets().values[3]'),9.3);
 plannerRead('state.phases.forEach(p=>p.rows=[{...newRow(),duration:1}]);render()');
 assert.equal(plannerRead('wellSwapTime(state.wells[0],derive())'),Date.UTC(2026,9,2,9));
 assert.equal(plannerRead('wellSwapTime(state.wells[1],derive())'),Date.UTC(2026,9,2,15));
@@ -176,5 +172,37 @@ assert.throws(()=>read("PlannerBuilder.create(template,{...configuration,wells:[
 assert.throws(()=>read("PlannerBuilder.create(template,{...configuration,wells:[{...configuration.wells[0],formation:'Unknown'}]})"),/choose a formation/);
 assert.throws(()=>read("PlannerBuilder.create(template,{...configuration,wells:[{...configuration.wells[0],phaseSelections:{setProduction:{method:'Unknown'}}}]})"),/Set Production method/);
 assert.throws(()=>read("PlannerBuilder.create(template,{...configuration,wells:[{...configuration.wells[0],phaseSelections:{toh:{killMethod:'Unknown'},setProduction:{method:'HPGL'}}}]})"),/TOH kill method/);
-assert.throws(()=>read("PlannerBuilder.create(template,{...configuration,wells:[{...configuration.wells[0],phaseSelections:{tih:{aphron:'yes'},setProduction:{method:'HPGL'}}}]})"),/Yes or No/);
+assert.throws(()=>read("PlannerBuilder.create(template,{...configuration,wells:[{...configuration.wells[0],phaseSelections:{preOps:{motorBha:'yes'},setProduction:{method:'HPGL'}}}]})"),/Yes or No/);
 console.log('PASS: populated phase builder, selection-specific hours/rows, independent wells, matching targets, TOH naming, production choices, placeholder replacement/manual preservation, end-time rescheduling/Undo, offline application, validation and escaped names.');
+
+for(const [index,vendor] of [[0,'HPGL'],[1,'ESP']]){
+ const rows=result.state.phases.filter(p=>p.wellId===result.state.wells[index].id).flatMap(p=>p.rows);
+ assert(rows.some(r=>r.code==='WOV_POOH'));
+ for(const row of rows)assert.equal(row.logistics.startsWith('Dispatch '+vendor+' vendors:'),row.code==='WOV_POOH');
+}
+
+// Retired flags in an older configuration cannot add activities or allowances.
+const retired = read('PlannerBuilder.create(template,configuration)');
+assert(!JSON.stringify(retired.state.wells).includes('splitString'));
+assert(!JSON.stringify(retired.state.wells).includes('aphron'));
+assert(retired.state.phases.every(p=>p.rows.every(r=>r.builderActivity!=='split-string'&&!r.com.includes('Aphron'))));
+
+// Removing a template line preserves the phase budget and scales every survivor proportionally.
+read(`var reducedSeed=structuredClone(template.seed);
+var baselinePlan=PlannerBuilder.phasePlans(template.seed,configuration.wells[0])[1];
+reducedSeed.activityTemplates['Trip in Hole']=reducedSeed.activityTemplates['Trip in Hole'].filter(row=>row.ingredientRow!==19);
+var reducedPlan=PlannerBuilder.phasePlans(reducedSeed,configuration.wells[0])[1];`);
+const baselinePlan=read('baselinePlan'),reducedPlan=read('reducedPlan');
+assert.equal(reducedPlan.target,baselinePlan.target);
+const remainingTotal=baselinePlan.rows.filter(r=>r.ingredientRow!==19).reduce((sum,r)=>sum+r.duration,0);
+for(const row of reducedPlan.rows){
+ const previous=baselinePlan.rows.find(r=>r.ingredientRow===row.ingredientRow);
+ assert(Math.abs(row.duration-previous.duration/remainingTotal*baselinePlan.target)<1e-7);
+}
+assert(Math.abs(reducedPlan.rows.reduce((sum,r)=>sum+r.duration,0)-baselinePlan.target)<1e-7);
+
+for(const well of result.state.wells){
+ const rows=result.state.phases.filter(p=>p.wellId===well.id).flatMap(p=>p.rows);
+ assert(rows.some(r=>r.code==='TEST_BOP'));
+ for(const row of rows)assert.equal(row.sshe,row.code==='TEST_BOP'?'W01 Well Control Readiness Check in Novara/KPA':'');
+}

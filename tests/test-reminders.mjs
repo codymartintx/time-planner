@@ -21,25 +21,25 @@ assert.equal(get('setupAttainmentSummary').textContent,get('attainmentSummary').
 assert(get('setupScoreboard').innerHTML.includes('84.99'));
 const duration=read('performance(derive().flat()).forecast');
 const id=read('state.phases[0].rows[0].id');
-for(const [field,value]of [['logistics','Confirm delivery\nBefore next phase'],['sshe','Review SSHE & V&V <notes>']]){
+for(const [field,value]of [['logistics','Confirm delivery\nBefore next phase'],['sshe','Review V&V <notes>']]){
  get('rows').onchange({target:{dataset:{field},value,closest:()=>({dataset:{id}})}});
  assert.equal(read(`state.phases[0].rows[0].${field}`),value);
 }
 assert.equal(read('performance(derive().flat()).forecast'),duration);
 assert.equal(get('setupScoreboard').innerHTML,get('scoreboard').innerHTML);
-assert(get('rows').innerHTML.includes('SSHE &amp; V&amp;V &lt;notes&gt;'));
+assert(get('rows').innerHTML.includes('V&amp;V &lt;notes&gt;'));
 read('active=2;insert(1)');
 assert.equal(read('state.phases[2].rows.length'),15);
 assert.equal(read('state.phases[2].rows[1].logistics'),'');assert.equal(read('state.phases[2].rows[1].sshe'),'');
 get('undoBtn').onclick();assert.equal(read('state.phases[2].rows.length'),14);
 assert.equal(read('state.phases[0].rows[0].logistics'),'Confirm delivery\nBefore next phase');
 const stored=JSON.parse(read('JSON.stringify(state)'));
-assert.equal(stored.phases[0].rows[0].sshe,'Review SSHE & V&V <notes>');
+assert.equal(stored.phases[0].rows[0].sshe,'Review V&V <notes>');
 // Hide either reminder, then both: group span and sticky positions follow visibility.
 read("state.hiddenColumns=['logistics'];render()");assert.equal(cols[10].style.display,'none');assert.equal(cols[11].style.display,'');
 read("state.hiddenColumns=['logistics','sshe'];render()");assert.equal(cols[10].style.display,'none');assert.equal(cols[11].style.display,'none');
 read("state.hiddenColumns=[];render();showColumnChoices()");assert.equal(cols[10].style.display,'');assert.equal(cols[11].style.display,'');
-assert(get('columnChoices').innerHTML.includes('Logistics Cue'));assert(get('columnChoices').innerHTML.includes('SSHE &amp; V&amp;V'));
+assert(get('columnChoices').innerHTML.includes('Logistics Cue'));assert(get('columnChoices').innerHTML.includes('V&amp;V'));
 read("state.columnWidths[10]=325;applyColumnWidths()");assert.equal(cols[10].style.width,'325px');
 read('openWellView()');assert.equal(read('copyDays.length'),5);
 for(let i=0;i<5;i++){
@@ -48,11 +48,44 @@ for(let i=0;i<5;i++){
  assert(!get('copytext').value.includes('Confirm delivery'));assert(!get('copytext').value.includes('Review SSHE'));
 }
 read("download=(content,type,name)=>{globalThis.savedDownload={content,type,name}};");get('csvBtn').onclick();
-assert(context.savedDownload.content.includes('"Logistics Cue","SSHE & V&V"'));
+assert(context.savedDownload.content.includes('"Logistics Cue","V&V"'));
 assert(context.savedDownload.content.includes('Confirm delivery\nBefore next phase'));
-assert(context.savedDownload.content.includes('Review SSHE & V&V <notes>'));
+assert(context.savedDownload.content.includes('Review V&V <notes>'));
 // Older drafts lacking reminder fields still render with usable widths and blank editors.
 read("state=structuredClone(seed);state.columnLayoutVersion=2;state.columnWidths=[24,...defaultColumnWidths.slice(0,10)];state.phases.forEach(p=>p.rows.forEach(r=>{delete r.logistics;delete r.sshe}));render()");
 assert.equal(read('state.columnWidths.length'),12);assert.equal(read('state.columnWidths[10]'),240);
 assert(!get('rows').innerHTML.includes('undefined'));
 console.log('PASS: reminder editing, saved data, independent phase insertion/Undo, resizing/hiding, older draft compatibility, CSV inclusion, five-column daily WellView copy, and shared Setup attainment.');
+
+// Selecting Ops (or its description) fills the cue for the row's own well.
+read("state=structuredClone(seed);render();state.setup.phaseSelections={setProduction:{method:'CGL'}}");
+const cueRow=read('state.phases[0].rows[0].id');
+const selectOp=(field,value)=>get('rows').onchange({target:{dataset:{field},value,closest:()=>({dataset:{id:cueRow,phaseIndex:'0'}})}});
+for(const method of ['CGL','HPGL','ESP','ESP-HR','ESP & ESP-HR']){
+ read(`state.setup.phaseSelections.setProduction.method=${JSON.stringify(method)}`);
+ selectOp('code','WOV_POOH');
+ const cue=read('state.phases[0].rows[0].logistics');
+ assert(cue.startsWith('Dispatch '+(method.startsWith('ESP')?'ESP':method)+' vendors:'));
+ assert(cue.includes(method.startsWith('ESP')?'Dual Spooler for CT line & ESP Cable':'Spooler for CT line'));
+ assert.equal(cue.includes('ESP Consultant'),method.startsWith('ESP'));
+ assert(cue.endsWith('- Torque & Test'));
+}
+selectOp('logistics','Custom dispatch note');selectOp('code','WOV_RIH');
+assert.equal(read('state.phases[0].rows[0].logistics'),'Custom dispatch note');
+selectOp('desc','PULL OUT OF HOLE');
+assert(read('state.phases[0].rows[0].logistics').startsWith('Dispatch ESP vendors:'));
+read("state.setup.phaseSelections.setProduction.method='GAPL'");
+selectOp('logistics','Keep this note');selectOp('code','WOV_POOH');
+assert.equal(read('state.phases[0].rows[0].logistics'),'Keep this note');
+
+// Ops selection fills V&V; manual notes persist for unrelated operations and Undo restores them.
+selectOp('sshe','Existing custom verification');
+selectOp('code','TEST_BOP');
+assert.equal(read('state.phases[0].rows[0].sshe'),'W01 Well Control Readiness Check in Novara/KPA');
+get('undoBtn').onclick();
+assert.equal(read('state.phases[0].rows[0].sshe'),'Existing custom verification');
+selectOp('category','TEST');selectOp('desc','BOP');
+assert.equal(read('state.phases[0].rows[0].sshe'),'W01 Well Control Readiness Check in Novara/KPA');
+selectOp('sshe','User verification note');selectOp('code','WOV_RIH');
+assert.equal(read('state.phases[0].rows[0].sshe'),'User verification note');
+assert(!get('rows').innerHTML.includes('SSHE'));
