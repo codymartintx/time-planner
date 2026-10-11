@@ -24,7 +24,7 @@ const context={document,window:{addEventListener(){}},localStorage:{getItem:()=>
 vm.createContext(context);vm.runInContext(script,context);const read=x=>vm.runInContext(x,context);
 assert(!html.includes('<tr class="letters"'));assert.equal((html.match(/id="selectAll"/g)||[]).length,0);
 assert.equal(phaseHeaders.length,6);assert(phaseHeaders.every(r=>r.children.length===12));assert.equal(handles().length,66);
-assert.equal(get('jobTitle').textContent,'Ranger 8549; Epley Glasscock E8E 205H');
+assert.equal(get('jobTitle').textContent,'Example Rig 1; Midland Basin 1H');
 for(let i=0;i<6;i++){
  const section=rowsHtml.slice(rowsHtml.indexOf(`id="phase-section-${i}"`));
  assert(section.indexOf('Current Phase Total')<section.indexOf('phase-column-headings'));
@@ -48,13 +48,13 @@ get('setupForm').onsubmit({preventDefault(){},target:{title:'Test Well',rig:'  R
 assert.equal(read('state.setup.rig'),'Ranger 9999');assert.equal(read('state.title'),'Test Well');
 assert.equal(get('jobTitle').textContent,'Ranger 9999; Test Well');assert.equal(document.title,'Ranger 9999; Test Well · Time Planner');
 assert.equal(get('setupScoreboard').innerHTML,get('scoreboard').innerHTML);
-get('undoBtn').onclick();assert.equal(get('jobTitle').textContent,'Ranger 8549; Epley Glasscock E8E 205H');
-read("delete state.setup.rig;render()");assert.equal(get('jobTitle').textContent,'Epley Glasscock E8E 205H');
+get('undoBtn').onclick();assert.equal(get('jobTitle').textContent,'Example Rig 1; Midland Basin 1H');
+read("delete state.setup.rig;render()");assert.equal(get('jobTitle').textContent,'Midland Basin 1H');
 console.log('PASS: phase headings before named columns; no letter row; per-phase resize controls survive insert/Undo and hide/show; optional rig title updates with setup; matching attainment views.');
 
 const olderDraft=JSON.parse(data);delete olderDraft.setup.rig;olderDraft.updated=Date.now()+1000;olderDraft.phases[0].rows[0].duration=5;
 context.localStorage.getItem=()=>JSON.stringify(olderDraft);
 const restoreScript=script.match(/try\{const draft=JSON.parse\(localStorage.getItem[\s\S]*?\}\}catch\{\}/)[0];
 vm.runInContext(restoreScript,context);get('restoreDraft').onclick();
-assert.equal(read('state.phases[0].rows[0].duration'),5);assert.equal(read('state.setup.rig'),'Ranger 8549');
+assert.equal(read('state.phases[0].rows[0].duration'),5);assert.equal(read('state.setup.rig'),'Example Rig 1');
 console.log('PASS: restoring an older browser draft retains its edits and supplies the new rig field.');

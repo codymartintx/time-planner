@@ -69,5 +69,32 @@ const firstCell=get('rows').innerHTML.match(/<tr data-phase-index="0" data-id="[
 assert(firstCell.includes('<div class="row-actions"><button class="row-insert"'));
 assert.equal((firstCell.match(/data-action="insert"/g)||[]).length,1);
 assert(firstCell.includes('<div class="rowtools"><button data-action="insert-above"'));
-assert(get('rows').innerHTML.includes('data-action="duplicate"'));assert(get('rows').innerHTML.includes('data-action="up"'));assert(get('rows').innerHTML.includes('data-action="down"'));assert(get('rows').innerHTML.includes('aria-label="Delete row'));
+assert(get('rows').innerHTML.includes('data-action="duplicate"'));assert(!get('rows').innerHTML.includes('data-action="up"'));assert(!get('rows').innerHTML.includes('data-action="down"'));assert(get('rows').innerHTML.includes('class="row-drag" draggable="true"'));assert(get('rows').innerHTML.includes('aria-label="Delete row'));
 console.log('PASS: moves stay within phases; date/duration duplicates and deletes preserve other activity durations and shift the schedule; Undo restores rows/times; copied reminders, reviewed targets, and WellView export; persistent + hover/focus controls without tooltips.');
+
+// Drag several positions in both timing modes. All data and durations follow the row.
+for(const pi of [0,3]) {
+ read('state=structuredClone(seed);history=[];render()');
+ const before=JSON.parse(read('JSON.stringify(state.phases)'));
+ const durations=JSON.parse(read('JSON.stringify(derive().flat().map(row=>[row.id,row.computedDuration]))'));
+ const from=0,to=before[pi].rows.length-1;
+ assert(read(`moveRow(${pi},${from},${to})`));
+ assert.equal(read(`state.phases[${pi}].rows[${to}].id`),before[pi].rows[0].id);
+ const after=JSON.parse(read('JSON.stringify(derive().flat().map(row=>[row.id,row.computedDuration]))'));
+ assert.deepEqual(after.sort(),durations.sort());
+ get('undoBtn').onclick();assert.deepEqual(JSON.parse(read('JSON.stringify(state.phases)')),before);
+}
+// Exercise the actual delegated drag/drop handlers and reject cross-phase drops.
+read('state=structuredClone(seed);history=[];render()');
+const dragIds=Array.from(read('state.phases[0].rows.map(r=>r.id)'));
+function dragTr(pi,id){return {dataset:{phaseIndex:String(pi),id},classList:{add(){},remove(){}},getBoundingClientRect(){return {top:0,height:100}}}}
+const sourceTr=dragTr(0,dragIds[0]);
+const transfer={setData(){}};
+const dragStart=()=>get('rows').ondragstart({target:{closest:()=>({closest:()=>sourceTr})},dataTransfer:transfer});
+dragStart();
+get('rows').ondrop({target:{closest:()=>dragTr(1,read('state.phases[1].rows[0].id'))},clientY:90,preventDefault(){}});
+assert.equal(read('history.length'),0);
+dragStart();
+get('rows').ondrop({target:{closest:()=>dragTr(0,dragIds[3])},clientY:90,preventDefault(){}});
+assert.equal(read('state.phases[0].rows[3].id'),dragIds[0]);
+get('undoBtn').onclick();assert.deepEqual(Array.from(read('state.phases[0].rows.map(r=>r.id)')),dragIds);

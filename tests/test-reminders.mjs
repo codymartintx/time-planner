@@ -78,14 +78,39 @@ read("state.setup.phaseSelections.setProduction.method='GAPL'");
 selectOp('logistics','Keep this note');selectOp('code','WOV_POOH');
 assert.equal(read('state.phases[0].rows[0].logistics'),'Keep this note');
 
-// Ops selection fills V&V; manual notes persist for unrelated operations and Undo restores them.
-selectOp('sshe','Existing custom verification');
-selectOp('code','TEST_BOP');
-assert.equal(read('state.phases[0].rows[0].sshe'),'W01 Well Control Readiness Check in Novara/KPA');
-get('undoBtn').onclick();
+// Custom cues survive matching operation changes. Blank/default cues follow the operation.
+selectOp('sshe','Existing custom verification');selectOp('code','TEST_BOP');
 assert.equal(read('state.phases[0].rows[0].sshe'),'Existing custom verification');
-selectOp('category','TEST');selectOp('desc','BOP');
-assert.equal(read('state.phases[0].rows[0].sshe'),'W01 Well Control Readiness Check in Novara/KPA');
+selectOp('sshe','');selectOp('category','TEST');selectOp('desc','BOP');
+assert(read('state.phases[0].rows[0].sshe').includes('- Conduct function test, drawdown test & PSI test'));
+assert(read('state.phases[0].rows[0].sshe').startsWith('Well Handover:'));
 selectOp('sshe','User verification note');selectOp('code','WOV_RIH');
 assert.equal(read('state.phases[0].rows[0].sshe'),'User verification note');
 assert(!get('rows').innerHTML.includes('SSHE'));
+
+for(const [code,phrase] of [['NUND_BOP','COCs with matching serial numbers'],['TEST_BOP','W01 Well Control Readiness checklists'],['WOV_BHA','BHA dimensions noted'],['WOV_RIH','Set & Test COFO']]) {
+ context.cueCode=code;
+ assert(read('verificationCue({code:cueCode})').includes(phrase));
+}
+assert.equal(read("verificationCue({code:'RURD',com:'Rig down'})"),'');
+assert.equal(read("verificationCue({code:'WOV_RIH',com:'MIRU'})").includes('Support Equip:'),false);
+assert(read("verificationCue({code:'RURD',com:'MIRU rig'})").includes('PRVs tested on fluid pumps'));
+selectOp('sshe','');selectOp('code','RURD');selectOp('com','MIRU rig and equipment');
+assert(read('state.phases[0].rows[0].sshe').includes('Support Equip:'));
+selectOp('com','Rig down');
+assert(!read('state.phases[0].rows[0].sshe').includes('Support Equip:'));
+get('undoBtn').onclick();
+assert(read('state.phases[0].rows[0].sshe').includes('Support Equip:'));
+read('state=JSON.parse(JSON.stringify(state));render()');
+assert(read('state.phases[0].rows[0].sshe').includes('Support Equip:'));
+
+assert.equal(read("verificationCue({code:'NUND_BOP',com:'ND BOP stack'})"),'');
+assert.equal(read("verificationCue({code:'NUND_BOP',com:'nd BOP'})"),'');
+assert(read("verificationCue({code:'NUND_BOP',com:'NU BOP and test'})").includes('COCs'));
+selectOp('sshe','');selectOp('code','NUND_BOP');selectOp('com','NU BOP');
+assert(read('state.phases[0].rows[0].sshe').includes('COCs'));
+selectOp('com','ND BOP');
+assert(!read('state.phases[0].rows[0].sshe').includes('COCs'));
+assert(read('state.phases[0].rows[0].sshe').includes('Well Handover:'));
+selectOp('sshe','Custom note');selectOp('com','NU BOP');selectOp('com','ND BOP');
+assert.equal(read('state.phases[0].rows[0].sshe'),'Custom note');

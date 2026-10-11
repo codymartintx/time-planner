@@ -34,7 +34,7 @@ assert(result.state.wells.every(well=>well.standardCadence));
 assert.equal(result.state.wells[1].setup.formation,'WCC');
 assert.equal(result.state.wells[1].setup.pre,4);assert.equal(result.state.wells[1].setup.post,6);
 assert.equal(result.state.wells[1].setup.prod,24);
-assert.equal(result.state.setup.pre,8.5);
+assert.equal(result.state.setup.pre,8);
 assert.equal(result.state.phases[3].name,'TOH');
 assert.equal(result.state.phases[4].productionMethod,'HPGL');
 assert.equal(result.state.phases[10].productionMethod,'ESP & ESP-HR');
@@ -66,13 +66,13 @@ for (const motorBha of [false,true]) for (const snub of [false,true]) for (const
 for (const [firstWell,splitString,motorBha] of [[true,false,false],[false,false,false],[true,true,false],[false,false,true],[true,true,true]]) {
   context.combo={...context.configuration.wells[0],phaseSelections:{preOps:{firstWell,splitString,motorBha},setProduction:{method:'CGL'}}};
   const plans=read('PlannerBuilder.phasePlans(template.seed,combo)');
-  const expected=(firstWell?8:4)+(motorBha?0.5:0);
+  const expected=(firstWell?8:4);
   assert(Math.abs(plans[0].rows.reduce((sum,row)=>sum+row.duration,0)-expected)<1e-7);
   context.noAdditions={...context.combo,phaseSelections:{preOps:{firstWell},setProduction:{method:'CGL'}}};
   const base=read('PlannerBuilder.phasePlans(template.seed,noAdditions)[0].rows');
   for(const code of ['TEST_BOP','WOV_BHA']) {
     const difference=plans[0].rows.find(row=>row.code===code).duration-base.find(row=>row.code===code).duration;
-    assert(Math.abs(difference-(code==='WOV_BHA'&&motorBha?0.5:0))<1e-7);
+    assert(Math.abs(difference)<1e-7);
   }
 }
 assert.equal(new Set([result.state.docId,...result.state.wells.map(well=>well.id),...result.state.phases.map(phase=>phase.id)]).size,15);
@@ -204,5 +204,55 @@ assert(Math.abs(reducedPlan.rows.reduce((sum,r)=>sum+r.duration,0)-baselinePlan.
 for(const well of result.state.wells){
  const rows=result.state.phases.filter(p=>p.wellId===well.id).flatMap(p=>p.rows);
  assert(rows.some(r=>r.code==='TEST_BOP'));
- for(const row of rows)assert.equal(row.sshe,row.code==='TEST_BOP'?'W01 Well Control Readiness Check in Novara/KPA':'');
+ for(const row of rows){
+  plannerContext.cueRow=row;plannerContext.firstInJob=row===result.state.phases[0].rows[0];
+  assert.equal(row.sshe,plannerRead('verificationCue(cueRow,firstInJob)'));
+ }
 }
+
+// Repeat imports repair misplaced closing rows, including older ingredient rows
+// without the explicit builder marker. Preserve edited details in both input modes.
+for (const mode of ['duration','date']) {
+ plannerRead('state=structuredClone(generatedState);history=[];render()');
+ plannerRead("state.phases[2].rows.slice(-2).forEach(row=>{delete row.builderActivity;row.logistics='Keep logistics';row.sshe='Keep verification';row.com+=' Edited';});setAllTimeModes('"+mode+"')");
+ const closing=JSON.parse(plannerRead('JSON.stringify(state.phases[2].rows.slice(-2))'));
+ plannerRead('applyLoaderImport(state.phases[2].id,workbook,longPreview)');
+ for (const [i,row] of closing.entries()) {
+  const actual=plannerRead('state.phases[2].rows.at('+(-2+i)+')');
+  for (const key of ['id','code','com','logistics','sshe']) assert.equal(actual[key],row[key]);
+ }
+ assert(plannerRead('derive().flat().every(row=>!row.error)'));
+ const durations=Array.from(plannerRead('derive()[2].slice(-2).map(row=>row.computedDuration)'));
+ assert.deepEqual(durations,[0.5,0.25]);
+ plannerRead('state.phases[2].rows.unshift(...state.phases[2].rows.splice(-2))');
+ assert.equal(plannerRead('planLoaderImport(state.phases[2],workbook,longPreview).reordered'),true);
+ plannerRead('applyLoaderImport(state.phases[2].id,workbook,longPreview)');
+ assert.deepEqual(Array.from(plannerRead('state.phases[2].rows.slice(-2).map(row=>row.code)')),['WOV_CIRC','SAFETY']);
+ assert.equal(plannerRead('state.phases[2].rows.length'),4);
+ assert.equal(plannerRead('planLoaderImport(state.phases[2],workbook,longPreview).overlaps'),0);
+}
+
+assert.equal(result.state.phases.flatMap(p=>p.rows).filter(r=>r.sshe.includes('Well Handover:')).length,1);
+assert(result.state.phases[0].rows[0].sshe.includes('Muster signs & PSMS signage'));
+
+// Planner setup exposes and saves the same independent well variables as Builder.
+plannerRead('state=structuredClone(generatedState);history=[];render()');
+get('setupBtn').onclick();
+for(const label of ['Production Equipment','WL for Packer or ESP Catch?','1st Well?','Motor BHA?','Snub?','Kill method','4.0 hrs for well swap; 8.0 hrs for last well on pad'])assert(get('setupFields').innerHTML.includes(label));
+const variableForm=plannerRead("new Map([['wellCount',String(state.wells.length)],['rig',state.setup.rig],['start',state.setup.start],...state.wells.flatMap((well,index)=>setupFields.filter(([key])=>!['rig','start'].includes(key)).map(([key])=>[fieldName(index,key),String(key==='title'?well.title:wellSetup(well)[key])]))])");
+for(const [key,value] of Object.entries({production:'CGL',wlPackerEspCatch:'yes',preFirst:'no',motorBha:'yes',tohSnub:'yes',tohKill:'Top Kill',well1_production:'GAPL',well1_wlPackerEspCatch:'no',well1_preFirst:'yes',well1_motorBha:'no',well1_tohSnub:'no',well1_tohKill:'10 KWF'}))variableForm.set(key,value);
+const beforeSetupDurations=JSON.parse(plannerRead('JSON.stringify(derive().flat().map(row=>row.computedDuration))'));
+get('setupForm').onsubmit({preventDefault(){},target:variableForm});
+assert.equal(plannerRead('state.setup.pre'),4);
+assert.equal(plannerRead('state.wells[1].setup.pre'),8);
+assert.equal(plannerRead('state.setup.phaseSelections.preOps.motorBha'),true);
+assert.equal(plannerRead('state.setup.phaseSelections.toh.snub'),true);
+assert.equal(plannerRead('state.setup.phaseSelections.toh.killMethod'),'Top Kill');
+assert.equal(plannerRead('state.setup.phaseSelections.setProduction.wlPackerEspCatch'),true);
+assert.equal(plannerRead('state.phases[4].productionMethod'),'CGL');
+assert.equal(plannerRead('state.phases[10].productionMethod'),'GAPL');
+assert.deepEqual(JSON.parse(plannerRead('JSON.stringify(derive().flat().map(row=>row.computedDuration))')),beforeSetupDurations);
+plannerRead('state=JSON.parse(JSON.stringify(state))');get('setupBtn').onclick();
+assert(get('setupFields').innerHTML.includes('name="production"'));
+assert.equal(plannerRead('setupVariables(setupWorkingWells[0].setup).tohKill'),'Top Kill');
+get('undoBtn').onclick();assert.equal(plannerRead('state.setup.phaseSelections.toh.snub'),false);

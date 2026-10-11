@@ -14,7 +14,7 @@ Open **`builder.html`** in Chrome to enter the rig, job start, number of wells a
 
 The builder and generated planner work offline without other files. Phase choices are independent for each well:
 
-- **Pre Ops:** always includes the seven BOP and MIRU Rig default rows from **TimeLog Building Ingrdients.xlsx**, followed by exactly one BHA row selected by Motor BHA. 1st Well uses an 8-hour base; No uses 4 hours. Motor BHA adds 0.50 hour to `WOV_BHA`, producing 8.5 or 4.5 hours respectively. Only the first well defaults to Yes for 1st Well.
+- **Pre Ops:** always includes the seven BOP and MIRU Rig default rows from **TimeLog Building Ingrdients.xlsx**, followed by exactly one BHA row selected by Motor BHA. 1st Well uses an 8-hour base; No uses 4 hours. Motor BHA changes the timelog comment to making up and function testing the BHA; it does not change the 8- or 4-hour target. Only the first well defaults to Yes for 1st Well.
 - **Trip in Hole:** always includes all five TIH default rows, including the Washington rubber/float test.
 - **Drill Out:** includes the loader planning row, the standard circulation row, and the default POOH pre-task brief. Importing recorded activities replaces only the loader planning row; the circulation and brief remain at the end even when the import extends past the original forecast.
 - **TOH:** Snub No selects exactly one 10 KWF or Top Kill row. Snub Yes uses the four snubbing rows instead, with the sheet's 12 : 0.25 : 1.25 : 3 weights. The kill-method selector is disabled while snubbing is selected.
@@ -23,7 +23,7 @@ The builder and generated planner work offline without other files. Phase choice
 
 The defaults, conditional rows, operation fields and comments follow **TimeLog Building Ingrdients.xlsx, Sheet1, rows 4–35**, in sheet order. Each well has independent choices; previews show the same rows used in its generated planner. Set Production and Post Ops retain their existing templates because the sheet does not define replacements for them. The templates live in `scripts/phase-templates.json`.
 
-Included rows share the existing phase-hour budgets. Rows without sheet weights retain the existing relative allowances where available; the added pressure-test and circulation rows use a 0.50-hour allocation weight. Drill Out reserves 0.50 hour for circulation and 0.25 hour for the brief, with the remainder on the loader placeholder (small budgets are scaled to fit). Snubbing uses the four supplied weights, scaled to the existing TOH target. Pre Ops and split-string additions retain their existing exact hours.
+Included rows share the existing phase-hour budgets. Rows without sheet weights retain the existing relative allowances where available; the added pressure-test and circulation rows use a 0.50-hour allocation weight. Drill Out reserves 0.50 hour for circulation and 0.25 hour for the brief, with the remainder on the loader placeholder (small budgets are scaled to fit). Snubbing uses the four supplied weights, scaled to the existing TOH target. Motor BHA retains the same Pre Ops budget.
 
 For development, `npm run build:builder` updates `builder.html` with the current `index.html` code. The builder interface and generation logic live in `scripts/`; `npm test` rebuilds the standalone file before checking it. Regenerate it after changing the planner so future downloads include those changes.
 
@@ -37,7 +37,7 @@ For development, `npm run build:builder` updates `builder.html` with the current
 - Each row has a persistent **+** in the Row column to insert directly below it. Hover or focus **+** to reveal **Insert above**, duplicate, move or delete, then move directly onto those buttons to use them. Tooltips are removed. Inserted rows begin with zero hours and blank operation/comment fields, keeping existing activity durations intact while you enter the new work. The phase footer also offers **Insert at top** and **Add row at bottom**. Undo restores an insertion.
 - **Clear everything** warns before removing all wells' details, phases, rows, comments, reminders, and browser recovery data. The reset cannot be undone. Operation choices and target-reference tables remain available. Start again through setup and **+ New phase**, then Save to keep the reset planner.
 - The input button switches all phases between entering duration and entering end time. Manual start times follow the previous activity's end time; imported loader starts retain their recorded dates and times.
-- Each phase has its own insert/add controls. Row tools support duplicate, delete, move up/down, and Undo.
+- Each phase has its own insert/add controls. Row tools support duplicate, delete, drag to reorder within a phase, and Undo. The drag handle also supports keyboard arrow keys.
 - **Copy for WellView** lets you choose a well and a 06:00–06:00 reporting day. It groups whole activities by their start time. Select entries in that preview. Events are never split automatically, and different wells are never combined in one copy.
 - WellView copy includes Actual Dur, Major Ops Code, Desc, Ops, and Com. Start/end times are shown for reference but excluded from the copied text. The hidden Ops column is included.
 - **Save** downloads a portable HTML copy containing the current job data and settings, named `timePlanner_Well Name_YYYY-MM-DD_HH-MM-SS.html` using the local save date/time. Multiple wells' names are joined with ` + `; filename-unsafe characters are replaced with hyphens. Browser drafts are local to that browser; they are not automatically uploaded to GitHub.
@@ -96,3 +96,17 @@ npm test
 The checks execute the embedded application script with a lightweight DOM mock. They cover multiple-well setup and targets, continuous timing, collapse persistence, confirmed reset, new phases, whole-event daily exports and preview selection, row tools, phase layout and column resizing, reminders, Undo, older draft compatibility, Drill Out loader imports (overnight dates, duration fallback, repeat imports, and manual row preservation), and the standalone builder (phase selections, exact duration additions, planning-row replacement and generated application behavior). They do not replace a visual check in Chrome.
 
 `outputs/` contains historical local development artifacts and is intentionally excluded from Git.
+
+## October 11 updates
+
+The Builder includes a per-well **WL for Packer or ESP Catch?** Yes/No choice, saved under the well’s Set Production selections. This records the choice without adding a duration allowance. Post Ops displays “4.0 hrs for well swap; 8.0 hrs for last well on pad.”
+
+Loader imports keep the Builder’s WOV_CIRC and SAFETY closing activities last in Drill Out, preserving their comments, reminders and durations. Repeat imports also repair their placement, including older rows identified by the ingredient template.
+
+The maintained source is now in this workspace (`index.html`, `scripts/`, and `tests/`). `builder.html` is regenerated by the build script, and the Latest HTML/ZIP files in `outputs/` are refreshed for distribution. Other output files are historical copies.
+
+V&V defaults include the job’s first-line handover, crew readiness and site checklist, plus NUND_BOP, TEST_BOP, WOV_BHA and WOV_RIH cues. RURD receives rig/support equipment checks only when its comment contains MIRU. Defaults populate Builder previews, generated planners, and loader activities; manually edited verification notes remain intact.
+
+NUND_BOP omits its default V&V cue when the comment contains the standalone abbreviation ND (case insensitive). Custom V&V notes remain unchanged. Row drag handles replace the move arrows, with before/after drop indicators and preserved durations, notes and Undo.
+
+The example loads as Example Rig 1 / Midland Basin 1H. Planner Job Setup includes the Builder’s Production Equipment, WL for Packer or ESP Catch, 1st Well, Motor BHA, Snub and Kill method choices for each well. Choices persist through setup, saving and Undo; 1st Well controls the 8/4-hour Pre Ops target and Set Production shows the selected equipment. Applying setup retains existing logged activities and durations.

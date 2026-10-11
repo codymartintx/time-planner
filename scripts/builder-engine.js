@@ -21,13 +21,13 @@ const PlannerBuilder = (() => {
     return {
       preOps: {firstWell: chosen.preOps?.firstWell ?? index === 0, motorBha: chosen.preOps?.motorBha ?? false},
       toh: {snub: chosen.toh?.snub ?? false, killMethod: chosen.toh?.killMethod || '10 KWF'},
-      setProduction: {method: chosen.setProduction?.method || ''}
+      setProduction: {method: chosen.setProduction?.method || '', wlPackerEspCatch: chosen.setProduction?.wlPackerEspCatch ?? false}
     };
   }
 
   function planningSetup(well, index = 0) {
     const variables = selections(well, index);
-    return {...well, pre: (variables.preOps.firstWell ? 8 : 4) + (variables.preOps.motorBha ? 0.5 : 0), prod: 24, phaseSelections: variables};
+    return {...well, pre: (variables.preOps.firstWell ? 8 : 4), prod: 24, phaseSelections: variables};
   }
 
   function readTemplate(encoded) {
@@ -67,7 +67,27 @@ const PlannerBuilder = (() => {
     });
   }
 
-const verificationCues = {TEST_BOP: 'W01 Well Control Readiness Check in Novara/KPA'};
+const verificationCues = {
+  "NUND_BOP": "- Equip. size & ratings suitable for job\n- COCs with matching serial numbers & acceptable dates",
+  "TEST_BOP": "- Conduct function test, drawdown test & PSI test\n- Complete W01 Well Control Readiness checklists in Novara/KPA",
+  "WOV_BHA": "BHA dimensions noted (OD, ID and length) and drifted",
+  "WOV_RIH": "- Work string has been tallied and drifted\n- Work string has been either visually inspected or fully NDT inspected within an acceptable amount of work\n\n- Set & Test COFO\n- COCs for elevators, TIW valves\n- Equipment is fit for job (elevator sizing, load ratings)"
+};
+const jobHandoverCue = "Well Handover:\n- Notify frac of any equip left on loc.\n- Confirm correct well name & number\n- Review procedure, WellView history, and any other supporting docs\n\nCrew Readiness:\n- Fit for duty\n- Signed in, orientation complete, pre-tour meeting before\n- SSEs accounted for and managed according to policy\n\nSite:\n- Remote gas (H2S & LEL) monitoring system\n- Windsocks\n- Cones & chain for Red Zones\n- Muster signs & PSMS signage";
+const rigVerificationCue = "Rig:\n- E-Kill (on RU and every 7 days)\n- DROPS components (pins, secondary retention)\n\nSupport Equip:\n- Internal Combustion Engines are RU according to equip spacing standards\n- Pump/FB iron tested withing 12 months with identifying bands\n- Pump/FB iron restrained according to standards\n- PRVs tested on fluid pumps\n- SDS available for all chems on location\n- All lifting equip has current certification with an identifying tag (slings, etc)";
+function verificationCue(row, firstInJob = false) {
+ const activity = row.code === 'NUND_BOP' && /\bND\b/i.test(row.com || '') ? '' : row.code === 'RURD' && /MIRU/i.test(row.com || '') ? rigVerificationCue : verificationCues[row.code] || '';
+ return [firstInJob ? jobHandoverCue : '', activity].filter(Boolean).join('\n\n');
+}
+function applyVerificationCue(row, firstInJob = false) {
+ const cue = verificationCue(row, firstInJob);
+ // Refresh generated defaults while preserving user-entered verification notes.
+ if (!row.sshe || row.sshe === row.generatedVerificationCue || row.sshe === 'W01 Well Control Readiness Check in Novara/KPA') {
+  row.sshe = cue;
+  row.generatedVerificationCue = cue;
+ }
+}
+
 function productionLogisticsCue(code, method) {
   if (code !== 'WOV_POOH') return '';
   if (method === 'CGL' || method === 'HPGL') return `Dispatch ${method} vendors:\n- Spooler for CT line\n- GL equipment and personnel\n- Torque & Test`;
@@ -78,19 +98,12 @@ function productionLogisticsCue(code, method) {
   function phasePlans(seed, well, index = 0) {
     const setup = planningSetup(well, index), chosen = setup.phaseSelections, targets = phaseTargets(seed, setup);
     const pre = normalRows(seed, 'Pre Ops', chosen.preOps.firstWell ? 8 : 4, chosen);
-    for (const [enabled, code, note] of [
-      [chosen.preOps.motorBha, 'WOV_BHA', 'Allow an additional 0.50 hr to make up the motor BHA.']
-    ]) if (enabled) {
-      const row = pre.find(item => item.code === code);
-      row.duration = round(row.duration + 0.5); row.target = row.duration; row.targetWeightHours = row.duration;
-      if (code === 'TEST_BOP') row.com += ' ' + note;
-    }
     const tih = normalRows(seed, 'Trip in Hole', targets[1], chosen);
     const toh = normalRows(seed, 'Trip Out of Hole', targets[3], chosen);
     const drill = normalRows(seed, 'Drill Out', targets[2], chosen);
     const production = [activity(seed, 'RURD_RUNPROD', 24, 'Set Production' + (chosen.setProduction.method ? ' — ' + chosen.setProduction.method : '') + '. Planning allowance; detailed activities to be defined.', {planningPlaceholder:'set-production'})];
     const rows = [pre, tih, drill, toh, production, normalRows(seed, 'Post Ops', setup.post)];
-    rows.flat().forEach(row => {row.logistics = productionLogisticsCue(row.code, chosen.setProduction.method); row.sshe = verificationCues[row.code] || ''});
+    rows.flat().forEach(row => {row.logistics = productionLogisticsCue(row.code, chosen.setProduction.method); applyVerificationCue(row, index === 0 && row === rows.flat()[0])});
     return phaseTypes.map((type, phaseIndex) => ({type, name:phaseLabel(type), target:targets[phaseIndex], rows:rows[phaseIndex], ...(type==='Set Production'?{productionMethod:chosen.setProduction.method}:{}), builderGenerated:true}));
   }
 
@@ -112,7 +125,7 @@ function productionLogisticsCue(code, method) {
         if (!Number.isFinite(well[key]) || well[key] < 0) throw new Error(label + ': target hours must be zero or positive.');
       }
       const chosen = selections(well, index);
-      for (const value of [chosen.preOps.firstWell, chosen.preOps.motorBha, chosen.toh.snub]) {
+      for (const value of [chosen.preOps.firstWell, chosen.preOps.motorBha, chosen.toh.snub, chosen.setProduction.wlPackerEspCatch]) {
         if (typeof value !== 'boolean') throw new Error(label + ': choose Yes or No for each phase variable.');
       }
       if (!['10 KWF', 'Top Kill'].includes(chosen.toh.killMethod)) throw new Error(label + ': choose a TOH kill method.');

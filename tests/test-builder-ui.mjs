@@ -26,6 +26,7 @@ assert.equal(get('phase-count-0-1').textContent,'· 5 rows');
 assert.equal(get('phase-count-0-2').textContent,'· 3 rows');
 assert.equal(get('phase-count-0-3').textContent,'· 1 row');
 assert(get('phase-preview-0-0').innerHTML.includes('Measured &amp; MU BHA'));
+change(0,'wlPackerEspCatch','yes');
 change(0,'motorBha','yes');
 assert(get('phase-preview-0-0').innerHTML.includes('Make up and function test BHA'));
 assert(!get('phase-preview-0-0').innerHTML.includes('Measured &amp; MU BHA'));
@@ -56,6 +57,10 @@ assert.equal(get('created').hidden,false);
 assert.equal(get('downloadPlanner').clicked,true);
 const downloaded=await createdBlob.text();
 const state=JSON.parse(downloaded.match(/id="planner-data">([\s\S]*?)<\/script>/)[1]);
+assert.equal(state.wells[0].setup.phaseSelections.setProduction.wlPackerEspCatch,true);
+assert.equal(state.wells[1].setup.phaseSelections.setProduction.wlPackerEspCatch,false);
+assert(get('wellFields').innerHTML.includes('WL for Packer or ESP Catch?'));
+assert(get('wellFields').innerHTML.includes('4.0 hrs for well swap; 8.0 hrs for last well on pad'));
 assert.equal(state.phases[3].rows.length,4);
 assert.equal(state.phases[9].rows.length,1);
 assert.equal(state.phases[0].rows.at(-1).ingredientRow,15);
@@ -77,7 +82,7 @@ for(const key of ['preFirst','motorBha','tohSnub','tohKill','post','production']
 }
 assert.equal((wellMarkup.match(/<details /g)||[]).length,2,'One collapsible preview per well');
 assert(!wellMarkup.includes('class="phase-config"'));
-assert(get('phase-preview-0-0').innerHTML.includes('W01 Well Control Readiness Check'));
+assert(get('phase-preview-0-0').innerHTML.includes('W01 Well Control Readiness checklists'));
 
 // Exercise the complete UI on LAN HTTP, where crypto.randomUUID is unavailable.
 const ids=[state.docId,...state.wells.map(w=>w.id),...state.phases.flatMap(p=>[p.id,...p.rows.map(r=>r.id)])];

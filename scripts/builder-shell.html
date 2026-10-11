@@ -29,7 +29,7 @@
 <aside class="summary" aria-label="Planner summary"><h2>Your planner</h2><p id="jobCaption" class="job-caption">Enter a job start to begin.</p><div class="counts"><div><strong id="wellTotal">1</strong><span>wells</span></div><div><strong id="phaseTotal">6</strong><span>phases</span></div></div>
 <p class="caption">Phases for each well</p><ol class="phase-list"><li>Pre Ops</li><li>Trip in Hole</li><li>Drill Out</li><li>TOH</li><li>Set Production</li><li>Post Ops</li></ol>
 <p class="caption">Well target hours</p><ul id="targetList" class="target-list"></ul><div class="summary-total"><span>Total job target</span><strong id="targetTotal">—</strong></div>
-<button id="createBtn" class="create" type="submit">Create planner</button><p class="summary-note">Use Chrome to download and open the populated planner. Import a loader to replace the Drill Out planning row. Both files work offline.</p>
+<button id="createBtn" class="create" type="submit">Create planner</button><p class="summary-note">Download and use planner offline</p>
 <div id="error" class="message error" role="alert" hidden></div>
 <div id="created" class="message" role="status" hidden><p id="createdMessage"></p><a id="openPlanner" target="_blank" rel="noopener">Open created planner</a><a id="downloadPlanner">Download again</a></div>
 </aside>
@@ -44,15 +44,15 @@ const template = PlannerBuilder.readTemplate(byId('planner-template').textConten
 const escape = PlannerBuilder.escapeHtml;
 const wellDrafts = [];
 let wellCount = 1, createdUrl = null;
-const blankDraft = index => ({title:'',formation:'',lateral:'',spacing:'',plugs:'',post:'8',preFirst:index===0?'yes':'no',motorBha:'no',tohSnub:'no',tohKill:'10 KWF',production:''});
+const blankDraft = index => ({title:'',formation:'',lateral:'',spacing:'',plugs:'',post:'8',preFirst:index===0?'yes':'no',motorBha:'no',tohSnub:'no',tohKill:'10 KWF',production:'',wlPackerEspCatch:'no'});
 const toNumber = value => value === '' ? NaN : Number(value);
 function activeWells() {
-  return wellDrafts.slice(0, wellCount).map(well => ({title:well.title,formation:well.formation,lateral:toNumber(well.lateral),spacing:toNumber(well.spacing),plugs:toNumber(well.plugs),post:toNumber(well.post),phaseSelections:{preOps:{firstWell:well.preFirst==='yes',motorBha:well.motorBha==='yes'},toh:{snub:well.tohSnub==='yes',killMethod:well.tohKill},setProduction:{method:well.production}}}));
+  return wellDrafts.slice(0, wellCount).map(well => ({title:well.title,formation:well.formation,lateral:toNumber(well.lateral),spacing:toNumber(well.spacing),plugs:toNumber(well.plugs),post:toNumber(well.post),phaseSelections:{preOps:{firstWell:well.preFirst==='yes',motorBha:well.motorBha==='yes'},toh:{snub:well.tohSnub==='yes',killMethod:well.tohKill},setProduction:{method:well.production,wlPackerEspCatch:well.wlPackerEspCatch==='yes'}}}));
 }
-function yesNo(well,index,key,label,note) {return `<label class="field">${label}<select data-well="${index}" data-key="${key}" aria-label="Well ${index+1} ${label}"><option value="yes" ${well[key]==='yes'?'selected':''}>Yes</option><option value="no" ${well[key]==='no'?'selected':''}>No</option></select><small>${note}</small></label>`;}
+function yesNo(well,index,key,label,note) {return `<label class="field">${label}<select data-well="${index}" data-key="${key}" aria-label="Well ${index+1} ${label}"><option value="yes" ${well[key]==='yes'?'selected':''}>Yes</option><option value="no" ${well[key]==='no'?'selected':''}>No</option></select>${note?`<small>${note}</small>`:''}</label>`;}
 
 function wellOptions(well,index) {
-  return `${yesNo(well,index,'preFirst','1st Well?','Pre Ops base: Yes 8 h; No 4 h.')}${yesNo(well,index,'motorBha','Motor BHA?','Adds 0.50 h to Pre Ops.')}${yesNo(well,index,'tohSnub','Snub?','Uses the TOH snubbing sequence.')}<label class="field">Kill method<select data-well="${index}" data-key="tohKill" aria-label="Well ${index+1} Kill method" ${well.tohSnub==='yes'?'disabled':''}>${['10 KWF','Top Kill'].map(method=>`<option value="${escape(method)}" ${well.tohKill===method?'selected':''}>${escape(method)}</option>`).join('')}</select><small>Used when Snub is No.</small></label><label class="field">Post Ops target (hr)<input type="number" data-well="${index}" data-key="post" aria-label="Well ${index+1} Post Ops target (hr)" min="0" step="any" value="${escape(well.post)}" required></label>`;
+  return `${yesNo(well,index,'wlPackerEspCatch','WL for Packer or ESP Catch?','')}${yesNo(well,index,'preFirst','1st Well?','Pre Ops base: Yes 8 h; No 4 h.')}${yesNo(well,index,'motorBha','Motor BHA?','')}${yesNo(well,index,'tohSnub','Snub?','')}<label class="field">Kill method<select data-well="${index}" data-key="tohKill" aria-label="Well ${index+1} Kill method" ${well.tohSnub==='yes'?'disabled':''}>${['10 KWF','Top Kill'].map(method=>`<option value="${escape(method)}" ${well.tohKill===method?'selected':''}>${escape(method)}</option>`).join('')}</select></label><label class="field">Post Ops target (hr)<input type="number" data-well="${index}" data-key="post" aria-label="Well ${index+1} Post Ops target (hr)" min="0" step="any" value="${escape(well.post)}" required><small>4.0 hrs for well swap; 8.0 hrs for last well on pad</small></label>`;
 }
 function timeLogPreview(index) {
  return `<details class="timelog-preview"><summary>Time log preview · all phases</summary>${PlannerBuilder.phaseTypes.map((type,phaseIndex)=>`<section class="preview-phase"><h3>${escape(PlannerBuilder.phaseLabel(type))}<span class="method" id="phase-method-${index}-${phaseIndex}"></span><span class="preview-meta"><span id="phase-count-${index}-${phaseIndex}"></span> · <strong id="phase-hours-${index}-${phaseIndex}">—</strong></span></h3><div class="preview-scroll"><table aria-label="Well ${index+1} ${escape(PlannerBuilder.phaseLabel(type))} time log"><thead><tr><th>Ops</th><th>Planned h</th><th>Com</th><th>Logistics Cue</th><th>V&amp;V</th></tr></thead><tbody id="phase-preview-${index}-${phaseIndex}"></tbody></table></div></section>`).join('')}</details>`;
@@ -77,7 +77,7 @@ function renderSummary() {
       byId(`phase-preview-${index}-${phaseIndex}`).innerHTML=phase.rows.map(row=>`<tr><td>${escape(row.code)}</td><td>${Number.isFinite(row.duration)?row.duration.toFixed(2):'—'}</td><td>${escape(row.com)}</td><td>${escape(row.logistics)}</td><td>${escape(row.sshe)}</td></tr>`).join('');
     });
     document.querySelector(`[data-well="${index}"][data-key="tohKill"]`).disabled=wellDrafts[index].tohSnub==='yes';
-    byId(`preBasis-${index}`).textContent=(setup.phaseSelections.preOps.firstWell?'8':'4')+' h base + '+(setup.pre-(setup.phaseSelections.preOps.firstWell?8:4)).toFixed(2)+' h selected additions = '+setup.pre.toFixed(2)+' h.';
+    byId(`preBasis-${index}`).textContent='Pre Ops target: '+setup.pre.toFixed(2)+' h.';
     return well.formation&&Number.isFinite(well.lateral)&&well.lateral>0&&targets.every(value=>Number.isFinite(value)&&value>=0)?targets.reduce((sum,value)=>sum+value,0):null;
   });
   byId('targetList').innerHTML=activeWells().map((well,index)=>`<li><span>${escape(well.title||'Well '+(index+1))}</span><strong>${totals[index]===null?'—':totals[index].toFixed(2)+' h'}</strong></li>`).join('');

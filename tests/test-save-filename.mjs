@@ -16,7 +16,7 @@ const context={document:{documentElement:{cloneNode(){return clone}},addEventLis
 vm.createContext(context);vm.runInContext(html.match(/<script>\s*([\s\S]*?)<\/script>/)[1],context);
 const read=expression=>vm.runInContext(expression,context);
 context.fixed=fixed;
-assert.equal(read('plannerFilename(fixed)'),'timePlanner_Epley Glasscock E8E 205H_2026-10-03_14-35-12.html');
+assert.equal(read('plannerFilename(fixed)'),'timePlanner_Midland Basin 1H_2026-10-03_14-35-12.html');
 context.unsafeName='  Alpha / B:4? "North"  ';
 read('state.title=unsafeName;normalizeWells()');
 assert.equal(read('plannerFilename(fixed)'),'timePlanner_Alpha - B-4- -North-_2026-10-03_14-35-12.html');
