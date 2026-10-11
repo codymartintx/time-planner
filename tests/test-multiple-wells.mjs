@@ -95,7 +95,7 @@ assert(read('copyDays.flatMap(d=>d.rows).every(r=>r.wellId===state.wells[1].id)'
 assert.equal(read('copyDays.flatMap(d=>d.rows).length'),6);
 assert(get('copytext').value.split('\n').every(line=>line.split('\t').length===5));
 assert(get('copytext').value.includes('Well-specific entry'));
-assert(!get('copytext').value.includes('Ranger 8549'));
+assert(!get('copytext').value.includes('Example Rig 1'));
 read('download=(content,type,name)=>{globalThis.savedDownload={content,type,name}}');get('csvBtn').onclick();
 assert(context.savedDownload.content.startsWith('\ufeff"Well","Phase"'));
 assert(context.savedDownload.content.includes('"Second well"'));

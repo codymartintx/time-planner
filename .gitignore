@@ -8,3 +8,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Local source workbooks are not published
+references/*.xlsx
+references/*.xlsm

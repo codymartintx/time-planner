@@ -13,7 +13,7 @@ context.encoded = encoded;
 const read = expression => vm.runInContext(expression, context);
 read('var template=PlannerBuilder.readTemplate(encoded)');
 const template = read('template');
-assert(!template.html.includes('Epley Glasscock'), 'Builder template contains no example well');
+assert(!template.html.includes('Midland Basin 1H'), 'Builder template contains no example well');
 assert.equal(template.seed.phases.length, 0);
 assert.equal(template.seed.preOpsRecovery, undefined);
 assert.equal(template.seed.importDetails, undefined);

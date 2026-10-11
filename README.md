@@ -1,6 +1,6 @@
 # Time Planner
 
-A single-file operations planner that runs locally in Chrome. Plan multiple wells on one continuous sheet, with separate well details, phase targets, reminders, and daily WellView copy/paste. It includes the saved **Ranger 8549; Epley Glasscock E8E 205H** example job.
+A single-file operations planner that runs locally in Chrome. Plan multiple wells on one continuous sheet, with separate well details, phase targets, reminders, and daily WellView copy/paste. It includes the saved **Example Rig 1; Midland Basin 1H** example job.
 
 ## Run
 
@@ -77,9 +77,8 @@ Line targets are allocated proportionately using the saved example activity dura
 
 ## Reference documents
 
-The original files are preserved in `references/`:
+The following target references are included in `references/`:
 
-- `R8549_Epley Glasscock 205H.xlsx` — example job activity log.
 - `Daily Drillout Scorecard - 09-10-2026_06-21-06 A.xlsm` — scorecard reference for target-attainment concepts.
 - `New Targets MB 4Q26 OL.xlsx` — target reference supplied for future work.
 
